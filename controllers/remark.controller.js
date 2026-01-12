@@ -1037,3 +1037,70 @@ export const downloadAnalysisReport = async (req, res) => {
 
 
 
+
+export const bulkCreateStudentRemarks = async (req, res) => {
+  try {
+    const remarks = req.body;
+
+    if (!Array.isArray(remarks) || remarks.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Body must be a non-empty array'
+      });
+    }
+
+    const cleanValue = (val) => {
+      if (val === 'NULL' || val === '' || val === undefined) return null;
+      return val;
+    };
+
+    const preparedData = remarks.map((r) => ({
+      remark_id: Number(r.remark_id),
+      student_id: r.student_id,
+      counsellor_id: r.counsellor_id,
+      supervisor_id: cleanValue(r.supervisor_id),
+
+      lead_status: r.lead_status,
+      lead_sub_status: r.lead_sub_status,
+      calling_status: r.calling_status,
+      sub_calling_status: r.sub_calling_status,
+      remarks: r.remarks,
+
+      callback_date:
+        r.callback_date && r.callback_date !== 'NULL'
+          ? new Date(r.callback_date)
+          : null,
+
+      callback_time: cleanValue(r.callback_time),
+
+      isdisabled:
+        r.isdisabled === 'TRUE'
+          ? true
+          : r.isdisabled === 'FALSE'
+          ? false
+          : false,
+
+      feesAmount: Number(r.feesAmount) || 0,
+
+      created_at: r.created_at ? new Date(r.created_at) : new Date(),
+      updated_at: r.updated_at ? new Date(r.updated_at) : new Date(),
+    }));
+
+    const inserted = await StudentRemark.bulkCreate(preparedData, {
+      validate: true,
+      ignoreDuplicates: true
+    });
+
+    return res.status(201).json({
+      success: true,
+      inserted: inserted.length
+    });
+
+  } catch (error) {
+    console.error('Bulk remark create error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};

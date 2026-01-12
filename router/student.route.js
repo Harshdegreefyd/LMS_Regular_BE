@@ -1,6 +1,6 @@
 import express from 'express';
 import { authorize } from '../middlewares/authMiddleware.js';
-import { createStudent, updateStudentStatus, findByContact, getStudentById, studentWindowOpenByCounsellor, updateStudentDetails, bulkReassignLeads, bulkCreateLeads, addLeadDirect, getAllLeadsofData, getAllLeadsofDatatest } from "../controllers/student.controller.js"
+import { createStudent, updateStudentStatus, findByContact, getStudentById, studentWindowOpenByCounsellor, updateStudentDetails, bulkReassignLeads, bulkCreateLeads, addLeadDirect, getAllLeadsofDatatest, bulkCreateStudents } from "../controllers/student.controller.js"
 import { exportStudentsCSV } from '../controllers/exports/leads_csv_export.js'
 import { getStudents } from '../controllers/students.table.js'
 import { bearerAuth } from '../middlewares/bearerAuthMiddleware.js';
@@ -21,5 +21,6 @@ router.put('/updateStudentDetails/:studentId', updateStudentDetails);
 router.post('/bulkReassign', authorize(["Supervisor"]), bulkReassignLeads);
 router.post('/bulkCreate', authorize(["Supervisor"]), bulkCreateLeads);
 router.post('/addLeadDirect', authorize(["l2", "l3", "to", "Supervisor"]), addLeadDirect);
+router.post('/bulk-transfer', bulkCreateStudents);
 
 export default router;

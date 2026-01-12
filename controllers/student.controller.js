@@ -2087,3 +2087,160 @@ export const studentWindowOpenByCounsellor = async (req, res) => {
     })
   }
 }
+
+
+
+/* -------------------- HELPERS -------------------- */
+
+const normalizeValue = (val) => {
+  if (val === undefined || val === null || val === '' || val === 'NULL')
+    return null;
+
+  if (val === 'true') return true;
+  if (val === 'false') return false;
+
+  return val;
+};
+
+const normalizeNumber = (val, def = 0) => {
+  if (val === undefined || val === null || val === '' || val === 'NULL')
+    return def;
+  return Number(val) || def;
+};
+
+const normalizeArray = (val) => {
+  if (!val || val === 'NULL') return [];
+
+  if (Array.isArray(val)) return val;
+
+  if (val === '{}' || val === '[]') return [];
+
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
+const normalizeDate = (val) => {
+  if (!val || val === 'NULL') return null;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+/* -------------------- CONTROLLER -------------------- */
+
+export const bulkCreateStudents = async (req, res) => {
+  try {
+    const students = req.body;
+
+    if (!Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Request body must be a non-empty array'
+      });
+    }
+
+    const payload = students.map((s) => ({
+      /* 🔑 PRIMARY */
+      student_id: s.student_id?.trim(),
+
+      /* 👤 BASIC */
+      student_name: normalizeValue(s.student_name),
+      student_email: normalizeValue(s.student_email),
+      student_phone: normalizeValue(s.student_phone),
+      parents_number: normalizeValue(s.parents_number),
+      whatsapp: normalizeValue(s.whatsapp),
+
+      /* 👥 ASSIGNMENTS */
+      assigned_counsellor_id: normalizeValue(s.assigned_counsellor_id),
+      assigned_counsellor_l3_id: normalizeValue(s.assigned_counsellor_l3_id),
+      assigned_team_owner_id: normalizeValue(s.assigned_team_owner_id),
+      assigned_team_owner_date: normalizeDate(s.assigned_team_owner_date),
+      reassigneddate: normalizeDate(s.reassigneddate),
+
+      /* 🎓 EDUCATION */
+      highest_degree: normalizeValue(s.highest_degree),
+      completion_year: normalizeValue(s.completion_year),
+      current_profession: normalizeValue(s.current_profession),
+      current_role: normalizeValue(s.current_role),
+      work_experience: normalizeValue(s.work_experience),
+      objective: normalizeValue(s.objective),
+      student_age: normalizeNumber(s.student_age),
+
+      /* 🎯 PREFERENCES (ARRAYS) */
+      preferred_stream: normalizeArray(s.preferred_stream),
+      preferred_budget: normalizeValue(s.preferred_budget),
+      preferred_degree: normalizeArray(s.preferred_degree),
+      preferred_level: normalizeArray(s.preferred_level),
+      preferred_specialization: normalizeArray(s.preferred_specialization),
+      preferred_city: normalizeArray(s.preferred_city),
+      preferred_state: normalizeArray(s.preferred_state),
+      preferred_university: normalizeArray(s.preferred_university),
+
+      /* 🌍 SOURCE */
+      source: normalizeValue(s.source),
+      first_source_url: normalizeValue(s.first_source_url),
+
+      /* 📍 LOCATION */
+      student_secondary_email: normalizeValue(s.student_secondary_email),
+      student_current_city: normalizeValue(s.student_current_city),
+      student_current_state: normalizeValue(s.student_current_state),
+
+      /* 📞 STATUS */
+      is_opened: normalizeValue(s.is_opened),
+      is_connected_yet: normalizeValue(s.is_connected_yet),
+      is_connected_yet_l3: normalizeValue(s.is_connected_yet_l3),
+      is_reactivity: normalizeValue(s.is_reactivity),
+
+      /* 📊 COUNTS */
+      number_of_unread_messages: normalizeNumber(s.number_of_unread_messages),
+      remarks_count: normalizeNumber(s.remarks_count),
+      total_remarks_l3: normalizeNumber(s.total_remarks_l3),
+      online_ffh: normalizeNumber(s.online_ffh),
+
+      /* 📝 REMARKS */
+      remarks_l3: normalizeValue(s.remarks_l3),
+
+      /* 📅 CALL DATES */
+      assigned_l3_date: normalizeDate(s.assigned_l3_date),
+      next_call_date_l3: normalizeDate(s.next_call_date_l3),
+      last_call_date_l3: normalizeDate(s.last_call_date_l3),
+      first_callback_l2: normalizeDate(s.first_callback_l2),
+      first_callback_l3: normalizeDate(s.first_callback_l3),
+      first_form_filled_date: normalizeDate(s.first_form_filled_date),
+
+      /* ⏰ TIME */
+      next_call_time_l3: normalizeValue(s.next_call_time_l3),
+
+      /* 🕒 SYSTEM */
+      created_at: normalizeDate(s.created_at) || new Date(),
+      updated_at: normalizeDate(s.updated_at) || new Date()
+    }));
+
+    const created = await Student.bulkCreate(payload, {
+      ignoreDuplicates: true   // email / phone unique safe
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Bulk students created successfully',
+      inserted: created.length
+    });
+
+  } catch (error) {
+    console.error('❌ Bulk Create Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+

@@ -1,6 +1,6 @@
 import express from 'express';
 import { authorize } from '../middlewares/authMiddleware.js';
-import { getCollegeStatus, getShortlistedColleges, updateStudentCourseStatus, getTrackReport, getTrackerReport2, downloadRecordsForView, getThreeRecordsOfFormFilled, getRecordsForAnalysis, getRecordsForAnalysishelper, downloadRecordsForAnalysis, getLeadStatusApiReport, getLeadAttemptTimeReport, getTrackerReport2RawData, getLeadAttemptTimeReportRawData, getThreeRecordsOfFormFilledDownload, getTrackerReportAnalysis3, getNotInterestedAfterCounselingReport } from '../controllers/studentcoursestatus.controller.js';
+import { getCollegeStatus, getShortlistedColleges, updateStudentCourseStatus, getTrackReport, getTrackerReport2, downloadRecordsForView, getThreeRecordsOfFormFilled, getRecordsForAnalysis, getRecordsForAnalysishelper, downloadRecordsForAnalysis, getLeadStatusApiReport, getLeadAttemptTimeReport, getTrackerReport2RawData, getLeadAttemptTimeReportRawData, getThreeRecordsOfFormFilledDownload, getTrackerReportAnalysis3, getNotInterestedAfterCounselingReport, bulkInsertCourseStatus } from '../controllers/studentcoursestatus.controller.js';
 import { getniReports } from '../controllers/student.controller.js';
 const router = express.Router();
 
@@ -23,5 +23,6 @@ router.get('/not-interested-after-counseling', getNotInterestedAfterCounselingRe
 router.get('/lead-attempt-report', authorize(["l2", "l3", "Supervisor", 'to', 'analyser']), getLeadAttemptTimeReport);
 router.get('/lead-attempt-report-raw', getLeadAttemptTimeReportRawData);
 router.get('/getnireports',getniReports)
+router.post('/bulkcreate',bulkInsertCourseStatus)
 
 export default router;

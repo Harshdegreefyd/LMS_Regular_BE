@@ -4950,3 +4950,30 @@ export const getTrackerReportAnalysis3 = async (req, res) => {
   }
 }
 
+
+
+
+
+export const bulkInsertCourseStatus = async (req, res) => {
+  try {
+    const  courseStatusList  = req.body; // Expecting an array of objects
+
+    if (!Array.isArray(courseStatusList) || courseStatusList.length === 0) {
+      return res.status(400).json({ success: false, message: 'courseStatusList must be a non-empty array' });
+    }
+
+    // Bulk create with "updateOnDuplicate" to avoid unique index conflicts
+    const insertedRecords = await CourseStatus.bulkCreate(courseStatusList, {
+      updateOnDuplicate: ['latest_course_status', 'is_shortlisted', 'college_api_sent_status', 'updated_at']
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `${insertedRecords.length} records inserted/updated successfully`,
+      data: insertedRecords
+    });
+  } catch (error) {
+    console.error('Bulk insert error:', error);
+    return res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};

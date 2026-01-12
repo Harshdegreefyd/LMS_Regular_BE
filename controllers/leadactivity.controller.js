@@ -1,4 +1,4 @@
-import { StudentLeadActivity } from '../models/index.js';
+import { Student, StudentLeadActivity } from '../models/index.js';
 export const normalizeLeadAnswers = (input) => {
   if (!Array.isArray(input)) return [];
 
@@ -313,6 +313,78 @@ export const getLeadActivitiesByDateRange = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error getting lead activities by date range',
+      error: error.message
+    });
+  }
+};
+
+
+
+
+
+
+export const bulkInsertStudentLeadActivities = async (req, res) => {
+  try {
+    const  activities  = req.body;
+
+    if (!Array.isArray(activities) || activities.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'activities must be a non-empty array'
+      });
+    }
+
+    // 1️⃣ Get all valid student_ids
+    const students = await Student.findAll({
+      attributes: ['student_id'],
+      raw: true
+    });
+
+    const validStudentIds = new Set(
+      students.map(s => s.student_id)
+    );
+
+    // 2️⃣ Split valid & invalid records
+    const validActivities = [];
+    const skippedActivities = [];
+
+    for (const activity of activities) {
+      if (
+        activity.student_id &&
+        validStudentIds.has(activity.student_id)
+      ) {
+        validActivities.push(activity);
+      } else {
+        skippedActivities.push({
+          student_id: activity.student_id || null,
+          reason: 'student_id not found in students table'
+        });
+      }
+    }
+
+    // 3️⃣ Insert only valid records
+    let insertedCount = 0;
+    if (validActivities.length > 0) {
+      const inserted = await StudentLeadActivity.bulkCreate(
+        validActivities,
+        { validate: true }
+      );
+      insertedCount = inserted.length;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Bulk insert completed',
+      inserted: insertedCount,
+      skipped: skippedActivities.length,
+      skippedRecords: skippedActivities
+    });
+
+  } catch (error) {
+    console.error('Bulk Lead Activity Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
       error: error.message
     });
   }

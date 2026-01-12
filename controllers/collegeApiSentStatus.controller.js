@@ -390,3 +390,75 @@ const CollegeApiHelper = async (param) => {
     })
   }
 }
+
+
+
+export const bulkInsertStudentCollegeApiStatus = async (req, res) => {
+  try {
+    const payload = Array.isArray(req.body) ? req.body : [req.body];
+
+    const inserted = [];
+    const skipped = [];
+
+    for (const item of payload) {
+      try {
+        // 🔹 Mandatory check (skip if missing)
+        if (!item.student_id || !item.college_name) {
+          skipped.push({
+            reason: 'Missing student_id or college_name',
+            data: item
+          });
+          continue;
+        }
+
+        // 🔹 Fix JSONB fields if they come as string
+        const parseIfString = (val) => {
+          if (!val) return null;
+          if (typeof val === 'string') {
+            try {
+              return JSON.parse(val);
+            } catch {
+              return null;
+            }
+          }
+          return val;
+        };
+
+        item.request_to_api = parseIfString(item.request_to_api);
+        item.response_from_api = parseIfString(item.response_from_api);
+        item.request_header_to_api = parseIfString(item.request_header_to_api);
+        item.response_header_from_api = parseIfString(item.response_header_from_api);
+
+        // 🔹 Fix boolean
+        item.is_primary =
+          item.is_primary === true ||
+          item.is_primary === 'TRUE' ||
+          item.is_primary === 'true';
+
+        // 🔹 Insert
+        const row = await StudentCollegeApiSentStatus.create(item);
+        inserted.push(row.id);
+
+      } catch (err) {
+        skipped.push({
+          reason: err.message,
+          data: item
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      inserted_count: inserted.length,
+      skipped_count: skipped.length,
+      inserted_ids: inserted,
+      skipped
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
