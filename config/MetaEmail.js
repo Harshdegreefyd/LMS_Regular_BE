@@ -1,0 +1,225 @@
+import EmailFunction from './Email.js';
+async function GenerateEmailFunction(data, to) {
+    try {
+        const emailContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Lead Notification</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            margin: 10px 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .lead-info {
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .lead-row {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eeeeee;
+            padding-bottom: 15px;
+        }
+        
+        .lead-row:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        
+        .lead-label {
+            width: 40%;
+            font-weight: 600;
+            color: #555555;
+            font-size: 14px;
+        }
+        
+        .lead-value {
+            width: 60%;
+            color: #333333;
+            font-size: 14px;
+            word-break: break-word;
+        }
+        
+        .marketing-section {
+            background-color: rgba(37, 117, 252, 0.05);
+            border-radius: 6px;
+            padding-inline: 20px;
+            
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2575fc;
+            margin-top: 0;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(37, 117, 252, 0.2);
+        }
+        
+        .cta-button {
+            display: block;
+            text-align: center;
+            margin: 30px auto 10px;
+        }
+        
+        .cta-button a {
+            display: inline-block;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 500;
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+        
+        .cta-button a:hover {
+            transform: translateY(-2px);
+        }
+        
+        .footer {
+            background-color: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #777777;
+        }
+        
+        .footer p {
+            margin: 5px 0;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .lead-row {
+                flex-direction: column;
+            }
+            
+            .lead-label, .lead-value {
+                width: 100%;
+            }
+            
+            .lead-value {
+                margin-top: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>New Lead Notification</h1>
+            <p>A new prospective student has shown interest</p>
+        </div>
+        
+        <div class="content">
+            <div class="lead-info">
+                <div class="lead-row">
+                    <div class="lead-label">Timestamp</div>
+                    <div class="lead-value">${data?.timestamp}</div>
+                </div>
+                <div class="lead-row">
+                    <div class="lead-label">Name</div>
+                    <div class="lead-value">${data?.name}</div>
+                </div>
+                
+                <div class="lead-row">
+                    <div class="lead-label">Email</div>
+                    <div class="lead-value">${data?.email}</div>
+                </div>
+                
+                <div class="lead-row">
+                    <div class="lead-label">Phone</div>
+                    <div class="lead-value">${data?.phone}</div>
+                </div>
+                
+                <div class="lead-row">
+                    <div class="lead-label">Source</div>
+                    <div class="lead-value">${data?.source}</div>
+                </div>
+                <div class="lead-row">
+                    <div class="lead-label">FormId</div>
+                    <div class="lead-value">${data?.form_id}</div>
+                </div>
+                 <div class="lead-row">
+                    <div class="lead-label">Campaign Name</div>
+                    <div class="lead-value">${data?.utm_campaign}</div>
+                </div>
+                 <div class="lead-row">
+                    <div class="lead-label">Advertisement Name</div>
+                    <div class="lead-value">${data?.ad_name}</div>
+                </div>
+            </div>
+        </div>
+        
+        
+    </div>
+</body>
+</html>`
+
+        const emailFunction = await EmailFunction(emailContent, 'New Lead Generated - Online Degree', to);
+        return emailFunction
+    }
+    catch (error) {
+        console.error(error)
+        throw new Error('Error generating email')
+    }
+}
+export default GenerateEmailFunction;

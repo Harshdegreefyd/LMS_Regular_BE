@@ -1,0 +1,279 @@
+// Helper function to get overall stats
+// export const getOverallStats = async (dataType, selectedAgent) => {
+//   try {
+//     const today = new Date();
+//     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+//     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+//     // Build where conditions based on context
+//     const buildWhereConditions = () => {
+//       const conditions = {};
+
+//       // If a specific agent is selected, filter by that agent
+//       if (selectedAgent) {
+//         if (dataType === 'l2') {
+//           conditions.assigned_counsellor_id = selectedAgent;
+//         } else if (dataType === 'l3') {
+//           conditions.assigned_counsellor_l3_id = selectedAgent;
+//         } else {
+//           // If no specific dataType, get all data for this agent (both L2 and L3)
+//           conditions[Op.or] = [
+//             { assigned_counsellor_id: selectedAgent },
+//             { assigned_counsellor_l3_id: selectedAgent }
+//           ];
+//         }
+//       } else {
+//         // No specific agent selected, filter by data type
+//         if (dataType === 'l2') {
+//           conditions.assigned_counsellor_id = { [Op.not]: null };
+//         } else if (dataType === 'l3') {
+//           conditions.assigned_counsellor_l3_id = { [Op.not]: null };
+//         }
+//         // If no dataType specified, no additional conditions (get all data)
+//       }
+
+//       return conditions;
+//     };
+
+//     const whereConditions = buildWhereConditions();
+//     const rawStats = await calculateStats(whereConditions);
+
+//     // Transform the stats to the flattened format expected by the frontend
+//     const flattenedStats = transformStatsToFlatFormat(rawStats, dataType, selectedAgent);
+
+//     return flattenedStats;
+
+//   } catch (error) {
+//     console.error('Error in getOverallStats:', error);
+//     return null;
+//   }
+// };
+
+// // Function to calculate stats using Sequelize
+// const calculateStats = async (whereConditions) => {
+//   try {
+//     const today = new Date();
+//     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+//     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+//     // Get total leads count
+//     const totalLeads = await Student.count({
+//       where: whereConditions
+//     });
+
+//     // Get fresh leads count - need to join with latest remark
+//     const freshLeads = await Student.count({
+//       where: whereConditions,
+//       include: [{
+//         model: StudentRemark,
+//         where: {
+//           lead_status: 'Fresh'
+//         },
+//         required: true,
+//         order: [['created_at', 'DESC']],
+//         limit: 1
+//       }]
+//     });
+
+//     // Today's callback pending (L2)
+//     const todayCallbackPendingL2 = await Student.count({
+//       where: {
+//         ...whereConditions,
+//         next_call_date_l3: {
+//           [Op.gte]: startOfToday,
+//           [Op.lt]: endOfToday
+//         }
+//       }
+//     });
+
+//     // Today's callback pending (L3)
+//     const todayCallbackPendingL3 = await Student.count({
+//       where: {
+//         ...whereConditions,
+//         next_call_date_l3: {
+//           [Op.gte]: startOfToday,
+//           [Op.lt]: endOfToday
+//         }
+//       }
+//     });
+
+//     // Get intent stats from latest remarks (L2)
+//     const intentStatsL2 = await StudentRemark.findAll({
+//       attributes: [
+//         'sub_calling_status',
+//         [sequelize.fn('COUNT', sequelize.col('sub_calling_status')), 'count']
+//       ],
+//       include: [{
+//         model: Student,
+//         where: whereConditions,
+//         attributes: []
+//       }],
+//       where: {
+//         sub_calling_status: {
+//           [Op.in]: ['Hot', 'Warm', 'Cold']
+//         }
+//       },
+//       group: ['sub_calling_status'],
+//       raw: true
+//     });
+
+//     // Get intent stats from latest remarks (L3) - assuming you have a field for L3 remarks
+//     const intentStatsL3 = await StudentRemark.findAll({
+//       attributes: [
+//         'sub_calling_status', // You might need a separate field for L3
+//         [sequelize.fn('COUNT', sequelize.col('sub_calling_status')), 'count']
+//       ],
+//       include: [{
+//         model: Student,
+//         where: whereConditions,
+//         attributes: []
+//       }],
+//       where: {
+//         sub_calling_status: {
+//           [Op.in]: ['Hot', 'Warm', 'Cold']
+//         }
+//       },
+//       group: ['sub_calling_status'],
+//       raw: true
+//     });
+
+//     // Not connected yet L2
+//     const notConnectedL2 = await Student.count({
+//       where: {
+//         ...whereConditions,
+//         is_connected_yet: { [Op.not]: true }
+//       }
+//     });
+
+//     // Not connected yet L3
+//     const notConnectedL3 = await Student.count({
+//       where: {
+//         ...whereConditions,
+//         is_connected_yet_l3: { [Op.not]: true }
+//       }
+//     });
+
+//     // Unread messages
+//     const studentsWithUnreadMessages = await Student.count({
+//       where: {
+//         ...whereConditions,
+//         number_of_unread_messages: { [Op.gt]: 0 }
+//       }
+//     });
+
+//     const totalUnreadMessages = await Student.sum('number_of_unread_messages', {
+//       where: whereConditions
+//     });
+
+//     // Process intent data
+//     const processIntentData = (intentData) => {
+//       const intentStats = { Hot: 0, Warm: 0, Cold: 0 };
+//       if (intentData && intentData.length > 0) {
+//         intentData.forEach(item => {
+//           if (item.sub_calling_status && intentStats.hasOwnProperty(item.sub_calling_status)) {
+//             intentStats[item.sub_calling_status] = parseInt(item.count);
+//           }
+//         });
+//       }
+//       return intentStats;
+//     };
+
+//     return {
+//       totalLeads: totalLeads || 0,
+//       freshLeads: freshLeads || 0,
+//       todayCallbackPending: {
+//         l2: todayCallbackPendingL2 || 0,
+//         l3: todayCallbackPendingL3 || 0,
+//         total: (todayCallbackPendingL2 || 0) + (todayCallbackPendingL3 || 0)
+//       },
+//       lastIntent: {
+//         l2: processIntentData(intentStatsL2),
+//         l3: processIntentData(intentStatsL3)
+//       },
+//       notConnected: {
+//         l2: notConnectedL2 || 0,
+//         l3: notConnectedL3 || 0,
+//         total: (notConnectedL2 || 0) + (notConnectedL3 || 0)
+//       },
+//       unreadMessages: {
+//         studentsWithUnreadMessages: studentsWithUnreadMessages || 0,
+//         totalUnreadMessages: totalUnreadMessages || 0
+//       }
+//     };
+
+//   } catch (error) {
+//     console.error('Error in calculateStats:', error);
+//     return null;
+//   }
+// };
+
+// // Transform stats function remains the same
+// const transformStatsToFlatFormat = (stats, dataType, selectedAgent) => {
+//   if (!stats) return null;
+
+//   const getIntentData = () => {
+//     if (dataType === 'l2') {
+//       return stats.lastIntent?.l2 || { Hot: 0, Warm: 0, Cold: 0 };
+//     } else if (dataType === 'l3') {
+//       return stats.lastIntent?.l3 || { Hot: 0, Warm: 0, Cold: 0 };
+//     } else {
+//       const l2Intent = stats.lastIntent?.l2 || { Hot: 0, Warm: 0, Cold: 0 };
+//       const l3Intent = stats.lastIntent?.l3 || { Hot: 0, Warm: 0, Cold: 0 };
+
+//       return {
+//         Hot: l2Intent.Hot + l3Intent.Hot,
+//         Warm: l2Intent.Warm + l3Intent.Warm,
+//         Cold: l2Intent.Cold + l3Intent.Cold
+//       };
+//     }
+//   };
+
+//   const getCallbackData = () => {
+//     if (dataType === 'l2') {
+//       return stats.todayCallbackPending?.l2 || 0;
+//     } else if (dataType === 'l3') {
+//       return stats.todayCallbackPending?.l3 || 0;
+//     } else {
+//       return stats.todayCallbackPending?.total || 0;
+//     }
+//   };
+
+//   const getNotConnectedData = () => {
+//     if (dataType === 'l2') {
+//       return stats.notConnected?.l2 || 0;
+//     } else if (dataType === 'l3') {
+//       return stats.notConnected?.l3 || 0;
+//     } else {
+//       return stats.notConnected?.total || 0;
+//     }
+//   };
+
+//   const intentData = getIntentData();
+
+//   return {
+//     total: stats.totalLeads || 0,
+//     freshLeads: stats.freshLeads || 0,
+//     todayCallbacks: getCallbackData(),
+//     intentHot: intentData.Hot,
+//     intentWarm: intentData.Warm,
+//     intentCold: intentData.Cold,
+//     notConnectedYet: getNotConnectedData(),
+//     allUnreadMessagesCount: stats.unreadMessages?.totalUnreadMessages || 0,
+//     unreadMessages: {
+//       leadsWithUnread: stats.unreadMessages?.studentsWithUnreadMessages || 0,
+//       totalUnreadCount: stats.unreadMessages?.totalUnreadMessages || 0
+//     },
+//     callingStatusBreakdown: {
+//       connected: stats.totalLeads - getNotConnectedData(),
+//       notConnected: getNotConnectedData(),
+//       withCallBackTime: getCallbackData()
+//     },
+//     funnelBreakdown: {
+//       fresh: stats.freshLeads || 0,
+//       attempted: 0,
+//       preApplication: 0,
+//       application: 0,
+//       notInterested: 0
+//     }
+//   };
+// };
