@@ -31,6 +31,8 @@ const allowedOrigins = [
   'https://nmimsonlineuniversity.in',
   'https://findonlineuniversity.com',
   "https://lms-api-test.degreefyd.com",
+  'https://apply.degreefyd.com/lp/engineering-colleges-in-punjab',
+  'https://apply.degreefyd.com/lp/colleges-in-punjab'
 ];
 
 app.use(cors({
