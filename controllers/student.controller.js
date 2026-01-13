@@ -2,7 +2,6 @@ import { Student, StudentRemark, Counsellor, StudentLeadActivity, LeadAssignment
 import { processStudentLead, SocketEmitter } from "../helper/leadAssignmentService.js"
 import { createRemark } from './remark.controller.js';
 import { Op, QueryTypes } from 'sequelize';
-import { autoSending } from '../helper/autoSending.js'
 import pMap from 'p-map';
 import axios from 'axios';
 import activityLogger from './supervisorController.js'
@@ -78,9 +77,9 @@ export const createStudent = async (req, res) => {
       },
       errors,
     });
-    if (autoSendingid.length > 0) {
-      await autoSending(autoSendingid)
-    }
+    // if (autoSendingid.length > 0) {
+    //   await autoSending(autoSendingid)
+    // }
   } catch (err) {
     console.error('❌ createStudent error:', err);
     res.status(500).json({
