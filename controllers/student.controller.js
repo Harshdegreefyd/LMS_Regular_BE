@@ -181,34 +181,25 @@ export const updateStudentStatus = async (req, res) => {
     };
 
     const newRemark = await createRemark(remarkData);
-    if ((leadStatus === "NotInterested" || leadStatus === "Not Interested") && leadSubStatus === "Only_Regular course") {
-      const counsellors = await Counsellor.findAll({
-        where: { counsellor_preferred_mode: "Regular", role: "l2", status: "active" }
-      });
-      const last = await LastAssignRegular.findOne();
-      const nextAgent = await getNextAgentInRoundRobin(counsellors, last?.counsellor_id, LastAssignRegular);
-      if (nextAgent) {
-        await Student.update(
-          { assigned_counsellor_id: nextAgent.counsellor_id },
-          { where: { student_id: studentId } }
-        );
-      }
-    }
+
 
 
     if ((leadStatus === "NotInterested" || leadStatus === "Not Interested") && leadSubStatus === "Only_Online course") {
-      const counsellors = await Counsellor.findAll({
-        where: { counsellor_preferred_mode: "Online", role: "l2", status: "active" }
+      const studentDetails = await Student.findByPk(studentId)
+      const studentleadActivityDetails = await StudentLeadActivity.findOne({
+        where: { student_id: studentId }
       });
-      const last = await LastassignOnline.findOne();
-      const nextAgent = await getNextAgentInRoundRobin(counsellors, last?.counsellor_id, LastassignOnline);
-
-      if (nextAgent) {
-        await Student.update(
-          { assigned_counsellor_id: nextAgent.counsellor_id },
-          { where: { student_id: studentId } }
-        );
+      const payload = {
+        name: studentDetails.dataValues.student_name,
+        email: studentDetails.dataValues.student_email,
+        phoneNumber: studentDetails.dataValues.student_phone,
+        source: studentDetails.dataValues.source,
+        first_source_url: studentDetails.dataValues.first_source_url,
+        utm_campaign: studentleadActivityDetails.dataValues.utm_campaign,
+        utm_campaign_id: studentleadActivityDetails.dataValues.utm_campaign_id,
+        student_comment: studentleadActivityDetails.dataValues.student_comment,
       }
+      const response = await axios.post('http://localhost:3001/v1/student/create', payload)
     }
     if (leadStatus === "enrolled" && req.files && req.files.enrollmentDocument) {
       const file = req.files.enrollmentDocument;

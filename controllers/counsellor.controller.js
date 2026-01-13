@@ -173,26 +173,27 @@ export const changePassword = async (req, res) => {
   }
 };
 
+
 export const getAllCounsellors = async (req, res) => {
   const { role } = req.query;
   const user = req.user;
 
-  console.log('User object:', user);
-  console.log('Fetching all counsellors with role:', role, 'User role:', user?.role, 'User ID:', user?.id);
-
   try {
     let whereClause = {
-      ...(role && { role })
+      role: { [Op.ne]: 'to' } 
     };
+
+    if (role && role !== 'to') {
+      whereClause.role = role;
+    }
 
     if (user?.role === 'to' && user?.id) {
       whereClause.assigned_to = user.id;
-      console.log('Team Owner view - Showing counsellors assigned to:', user.id);
     }
 
     const counsellors = await Counsellor.findAll({
       where: whereClause,
-      attributes: { exclude: ['counsellor_password'] }
+      attributes: { exclude: ['counsellor_password', 'role'] }
     });
 
     const supervisors = await Counsellor.findAll({
@@ -205,22 +206,25 @@ export const getAllCounsellors = async (req, res) => {
       supervisorMap[sup.counsellor_id] = sup.counsellor_name;
     });
 
-    const formattedCounsellors = counsellors.map(counsellor => {
-      const counsellorData = counsellor.toJSON();
+    const formattedCounsellors = counsellors.map(c => {
+      const data = c.toJSON();
       return {
-        ...counsellorData,
-        supervisor_name: counsellorData.assigned_to ?
-          supervisorMap[counsellorData.assigned_to] || null : null
+        ...data,
+        supervisor_name: data.assigned_to
+          ? supervisorMap[data.assigned_to] || null
+          : null
       };
     });
 
-    console.log('Fetched counsellors:', formattedCounsellors.length);
     res.status(200).json(formattedCounsellors);
   } catch (error) {
-    console.log('Error in getAllCounsellors:', error.message);
-    res.status(500).json({ message: 'Error fetching counsellors', error: error.message });
+    res.status(500).json({
+      message: 'Error fetching counsellors',
+      error: error.message
+    });
   }
 };
+
 
 export const deleteCounsellor = async (req, res) => {
   try {
