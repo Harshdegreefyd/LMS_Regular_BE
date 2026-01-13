@@ -77,9 +77,7 @@ export const createStudent = async (req, res) => {
       },
       errors,
     });
-    // if (autoSendingid.length > 0) {
-    //   await autoSending(autoSendingid)
-    // }
+   
   } catch (err) {
     console.error('❌ createStudent error:', err);
     res.status(500).json({

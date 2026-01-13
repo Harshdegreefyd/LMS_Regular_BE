@@ -29,13 +29,10 @@ export const Postwebhook = async (req, res) => {
         phone_number: formattedLead.phone_number,
       },
     });
-
+console.log(formattedLead,"amy test")
     if (!existing) {
       await GoogleWebHook.create(formattedLead);
-    } else {
-      console.log('Duplicate Google lead, skipping...');
-      return;
-    }
+    } 
 
     // await sendMail({
     //   name: formattedLead.full_name,
@@ -54,7 +51,7 @@ export const Postwebhook = async (req, res) => {
     //   'Deepak@degreefyd.com',
     //   'Vinay.sharma@degreefyd.com',
     // ]);
-
+console.log("trigger1")
     await forwardToStudentAPI(formattedLead, mappedValues);
   } catch (error) {
     console.error('Error processing lead webhook:', error.message);
@@ -63,6 +60,7 @@ export const Postwebhook = async (req, res) => {
 };
 
 const mapGoogleLead = (lead) => {
+  console.log(lead)
   const fieldMappings = {
     full_name: ['FULL_NAME', 'full_name', 'name', 'Name', 'Full Name'],
     email: ['EMAIL', 'email', 'Email', 'User Email'],
@@ -107,6 +105,7 @@ const mapGoogleLead = (lead) => {
 
 const forwardToStudentAPI = async (formattedLead, mappedValues) => {
   try {
+    console.log(formattedLead,"new trigger1")
     let student_extra_details = mapAnswersByKeyword(formattedLead?.additional_fields)
     await axios.post('http://localhost:3031/v1/student/create', {
       name: formattedLead.full_name,
