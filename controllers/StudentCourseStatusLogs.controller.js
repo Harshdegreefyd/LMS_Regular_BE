@@ -38,7 +38,7 @@ export const createStatusLog = async (req, res) => {
       timestamp: new Date()
     });
      if (status == "Form Submitted – Portal Pending" || status == "Form Submitted – Completed") {
-      const l3data=await axios.post('http://localhost:3001/v1/leadassignmentl3/assign',{ 
+      const l3data=await axios.post('http://localhost:3031/v1/leadassignmentl3/assign',{ 
             studentId, 
             collegeName: courseDetails.university_name, 
             Course: courseDetails.course_name, 
