@@ -959,7 +959,7 @@ async function handleSpecialUniversity(collegeName, userResponse, studentId, sen
     { Attribute: "Source", Value: "nuvora" },
     { Attribute: "SourceCampaign", Value: "" },
     { Attribute: "SourceMedium", Value: "" },
-    { Attribute: "mx_Campus", Value: collegeName.includes("Chandigarh University") ? "Chandigarh" : "Gurgaon" },
+    { Attribute: "mx_Campus", Value: collegeName.includes("Chandigarh University") ? "Mohali" : "Gurgaon" },
     { Attribute: "mx_Course2", Value: "Btech" },
     { Attribute: "mx_State", Value: "Delhi" },
     { Attribute: "mx_City", Value: "West Delhi" }
