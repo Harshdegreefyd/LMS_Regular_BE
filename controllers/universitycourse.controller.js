@@ -1434,7 +1434,7 @@ const sanitizeCourses = (courses) => {
     // 🔗 URL
     brochure_url:
       course.brochure_url &&
-      /^https?:\/\/.+/i.test(course.brochure_url)
+        /^https?:\/\/.+/i.test(course.brochure_url)
         ? course.brochure_url
         : null,
 
@@ -1491,6 +1491,50 @@ export const insertUniversityCourses = async (req, res) => {
     console.error('Bulk insert error:', error);
     res.status(500).json({
       message: 'Bulk insert failed',
+      error: error.message
+    });
+  }
+};
+export const getCourseById = async (req, res) => {
+  try {
+    const { university_name } = req.params;
+    
+    if (!university_name) {
+      return res.status(400).json({
+        success: false,
+        message: 'University name is required'
+      });
+    }
+    
+    console.log('Looking for university:', university_name);
+    
+    // Use where clause properly
+    const response = await UniversityCourse.findOne({
+      where: { 
+        university_name: university_name 
+      }
+    });
+
+    if (!response) {
+      return res.status(404).json({
+        success: false,
+        message: `No course found for university: ${university_name}`
+      });
+    }
+
+    console.log('Found course:', response.university_name);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Course for university',
+      response: response
+    });
+
+  } catch (error) {
+    console.error('Get course error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch course',
       error: error.message
     });
   }

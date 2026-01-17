@@ -47,23 +47,17 @@ export const createStudent = async (req, res) => {
     }
     const processedLeads = [];
     const errors = [];
-    const autoSendingid = []
     for (const leadData of leads) {
       const result = await processStudentLead(leadData);
-      if (result.success) {
-        processedLeads.push(result);
-        if (['Landing Page', 'IVR', 'Google_Lead_Form'].includes(leadData?.source) && result?.studentStatus == 'created') {
-          autoSendingid.push(result?.student?.student_id)
-        }
-      } else {
-        errors.push({
-          leadData: {
-            email: leadData.email,
-            phone: leadData.phoneNumber || leadData.phone_number || leadData.mobile || '',
-          },
-          error: result.error,
-        });
-      }
+      const studentWithUTM = {
+        ...result.student.dataValues,
+        utmCampaign: result.leadActivity?.utmCampaign || leadData.utmCampaign,
+        first_source_url: result.leadActivity?.first_source_url || leadData.SourceUrl,
+        source: result.leadActivity?.source || leadData.source
+      };
+
+      console.log('Sending to autoSending with data:', studentWithUTM);
+      await autoSending(studentWithUTM);
     }
 
     res.status(201).json({
@@ -77,9 +71,7 @@ export const createStudent = async (req, res) => {
       },
       errors,
     });
-    // if (autoSendingid.length > 0) {
-    //   await autoSending(autoSendingid)
-    // }
+
   } catch (err) {
     console.error('❌ createStudent error:', err);
     res.status(500).json({
@@ -1454,6 +1446,7 @@ export const getAllLeadsofDatatest = async (req, res) => {
 
 
 import ExcelJS from 'exceljs';
+import { autoSending } from '../helper/autoSending.js';
 
 export const getniReports = async (req, res) => {
   try {

@@ -16,6 +16,7 @@ import {
   disableCourses,
   getByCourseandUniversity,
   updateUniversal,
+  getCourseById,
   insertUniversityCourses
 } from '../controllers/universitycourse.controller.js';
 
@@ -78,5 +79,5 @@ router.post('/bulk-insert', insertUniversityCourses);
 
 router.patch('/:courseId/status', updateCourseStatus);
 router.put('/:courseId', updateCourse);
-
+router.get('/getByCourseId/:university_name',getCourseById)
 export default router;

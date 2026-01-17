@@ -12,15 +12,14 @@ export const updateStudentCourseStatus = async (req, res) => {
       isShortlisted
     } = req.body;
 
-    const userId = req.user?.counsellorId || req.user?.supervisorId || req.user.id || null;
-    // Validate input
-    if (!courseId || !studentId || !status || !userId) {
+    if (!courseId || !studentId || !status) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields or user identity'
+        message: 'Missing required fields: courseId, studentId, and status are required'
       });
     }
 
+    const userId = req.user?.counsellorId || req.user?.supervisorId || req.user?.id || 'auto';
 
     let existingStatus = await CourseStatus.findOne({
       where: {
@@ -46,55 +45,56 @@ export const updateStudentCourseStatus = async (req, res) => {
       });
     }
 
-    // Create new entry if not found
     const newStudentCourseStatus = await CourseStatus.create({
       course_id: courseId,
       student_id: studentId,
       latest_course_status: status,
       is_shortlisted: isShortlisted !== undefined ? isShortlisted : true,
-      // created_by: userId, // Note: You may need to add this field to your schema
     });
+
+    if (courseId && studentId) {
+      try {
+        const collegeName = await UniversityCourse.findOne({
+          where: { course_id: courseId },
+          attributes: [
+            'university_name',
+            'university_state',
+            'university_city'
+          ]
+        });
+
+        const student = await Student.findOne({
+          where: { student_id: studentId },
+          attributes: [
+            'source',
+            'student_name',
+            'student_phone',
+            'student_email'
+          ]
+        });
+
+        if (collegeName && student) {
+          await pushLeadToAudience({
+            groupName: collegeName.university_name,
+            lead: {
+              source: student.source,
+              student_name: student.student_name,
+              student_phone: student.student_phone,
+              student_email: student.student_email
+            }
+          });
+        }
+      } catch (audienceError) {
+        console.error('Error pushing to audience:', audienceError.message);
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'New college status created successfully',
       data: newStudentCourseStatus,
       isNewEntry: true
     });
-    if (courseId && studentId) {
-      const collegeName = await UniversityCourse.findOne({
-        where: { course_id: courseId },
-        attributes: [
-          'university_name',
-          'university_state',
-          'university_city'
-        ]
-      });
-
-      const student = await Student.findOne({
-        where: { student_id: studentId },
-        attributes: [
-          'source',
-          'student_name',
-          'student_phone',
-          'student_email'
-        ]
-      });
-      //  if(student?.source.toLowerCase()=='facebook')
-      //  {
-      //    await pushLeadToAudience({groupName:collegeName?.university_name, lead:student})
-      //  }
-      await pushLeadToAudience({
-        groupName: collegeName?.university_name,
-        lead: {
-          source: student?.source,
-          student_name: student?.student_name,
-          student_phone: student?.student_phone,
-          student_email: student?.student_email
-        }
-      });
-
-
-    }
 
   } catch (error) {
     console.error('Error updating college status:', error);

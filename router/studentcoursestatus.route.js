@@ -5,7 +5,7 @@ import { getniReports } from '../controllers/student.controller.js';
 const router = express.Router();
 
 
-router.post('/update', authorize(["l2", "l3", "Supervisor", 'to']), updateStudentCourseStatus);
+router.post('/update', updateStudentCourseStatus);
 router.get('/shortlisted/:studentId/full', authorize(["l2", "l3", "Supervisor", 'to']), getShortlistedColleges);
 router.get('/download', downloadRecordsForAnalysis);
 router.get('/download-shorilist', downloadRecordsForView);
@@ -22,7 +22,7 @@ router.get('/report3', getTrackerReportAnalysis3);
 router.get('/not-interested-after-counseling', getNotInterestedAfterCounselingReport);
 router.get('/lead-attempt-report', authorize(["l2", "l3", "Supervisor", 'to', 'analyser']), getLeadAttemptTimeReport);
 router.get('/lead-attempt-report-raw', getLeadAttemptTimeReportRawData);
-router.get('/getnireports',getniReports)
-router.post('/bulkcreate',bulkInsertCourseStatus)
+router.get('/getnireports', getniReports)
+router.post('/bulkcreate', bulkInsertCourseStatus)
 
 export default router;
