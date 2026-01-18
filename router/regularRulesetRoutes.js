@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.get("/", getRuleset);
 
-router.post("/", authorize(["Supervisor"]), upsertRuleset);
+router.post("/", authorize(["Supervisor","supervisor"]), upsertRuleset);
 
 export default router;

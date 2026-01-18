@@ -30,6 +30,7 @@ import websiteChatRoutes from './websiteChat.route.js';
 import univeristyBrochureRoutes from './universityBrochure.route.js';
 import StudentReassignmentLogic from './student_reassignment_logic.route.js';
 import secondaryStudentRoutes from './studentInfo.route.js';
+import dbRuleSetRoutes from '../router/regularRulesetRoutes.js';
 
 const router = express.Router();
 
@@ -64,5 +65,6 @@ router.use('/student-reassignment-logic', StudentReassignmentLogic);
 router.use('/secondaryStudentInfo', secondaryStudentRoutes);
 router.use('/api/crm', collegeCrmRoutes);
 router.use('/api/meta-ads', metaAdsRoutes);
+router.use('/dbRuleset', dbRuleSetRoutes);
 
 export default router;
