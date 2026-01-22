@@ -585,7 +585,11 @@ export const processStudentLead = async (leadData) => {
       leadData.ip_city ||
       leadData.IP_CITY ||
       "",
-
+    student_comment:
+      leadData.studentComment ||
+      leadData.student_comment ||
+      leadData.answers ||
+      [],
     prefState:
       leadData.state ||
       leadData.State ||

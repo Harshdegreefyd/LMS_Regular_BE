@@ -65,12 +65,10 @@ export const createLeadActivity = async (leadData, studentId) => {
       browser: leadData.browser || "",
       device: leadData.device || "",
 
-      student_comment: normalizeLeadAnswers(
-        leadData.studentComment ||
-          leadData.student_comment ||
-          leadData.answers ||
-          [],
-      ),
+      student_comment:
+        source == "Google_Lead_form"
+          ? leadData.student_comment
+          : normalizeLeadAnswers(leadData.student_comment || []),
 
       highest_qualification: leadData.highestQualification || "",
       working_professional: leadData.workingProfessional ?? false,
