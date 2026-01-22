@@ -189,6 +189,7 @@ export const updateStudentStatus = async (req, res) => {
         utm_campaign: studentleadActivityDetails.dataValues.utm_campaign,
         utm_campaign_id: studentleadActivityDetails.dataValues.utm_campaign_id,
         student_comment: studentleadActivityDetails.dataValues.student_comment,
+        is_transfer: true
       }
       const response = await axios.post('http://localhost:3001/v1/student/create', payload)
     }

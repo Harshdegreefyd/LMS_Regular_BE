@@ -1,7 +1,7 @@
-import axios from 'axios';
+import axios from "axios";
 import { Student, UniversityCourse } from "../models/index.js";
-import { createCollegeApiSentStatus } from './collegeApiSentStatus.controller.js';
-import CourseHeaderValue from '../models/university_header_values.js';
+import { createCollegeApiSentStatus } from "./collegeApiSentStatus.controller.js";
+import CourseHeaderValue from "../models/university_header_values.js";
 import { Op, fn, col, where } from "sequelize";
 
 async function findHeaderValue(collegeName) {
@@ -10,37 +10,50 @@ async function findHeaderValue(collegeName) {
   try {
     const courseHeaderValue = await CourseHeaderValue.findOne({
       where: where(fn("LOWER", col("university_name")), {
-        [Op.eq]: collegeName.toLowerCase()
+        [Op.eq]: collegeName.toLowerCase(),
       }),
       order: [["created_at", "ASC"]],
     });
-console.log("hello,",courseHeaderValue)
+    console.log("hello,", courseHeaderValue);
     if (!courseHeaderValue || !courseHeaderValue.values) {
       console.error(`❌ Course header values not found for: ${collegeName}`);
-      throw new Error('Course header values not found');
+      throw new Error("Course header values not found");
     }
 
     console.log(`✅ Found header values for: ${collegeName}`);
     return courseHeaderValue;
   } catch (error) {
-    console.error(`❌ Error fetching course header values for ${collegeName}:`, error);
+    console.error(
+      `❌ Error fetching course header values for ${collegeName}:`,
+      error,
+    );
     throw error;
   }
 }
 
-
-async function updateStudentShortlistStatus(studentId, collegeName, status, requestData = null, responseData = null, headersData = null, sendType, studentEmail = null, studentPhone = null, isPrimary = true) {
+async function updateStudentShortlistStatus(
+  studentId,
+  collegeName,
+  status,
+  requestData = null,
+  responseData = null,
+  headersData = null,
+  sendType,
+  studentEmail = null,
+  studentPhone = null,
+  isPrimary = true,
+) {
   console.log(`📝 Updating status for ${collegeName}:`, {
     studentId,
     status,
     isPrimary,
-    studentEmail: studentEmail || 'Using primary email',
-    studentPhone: studentPhone || 'Using primary phone'
+    studentEmail: studentEmail || "Using primary email",
+    studentPhone: studentPhone || "Using primary phone",
   });
 
   try {
     if (!collegeName || !studentId) {
-      console.error('❌ Missing collegeName or studentId for status update');
+      console.error("❌ Missing collegeName or studentId for status update");
       return;
     }
 
@@ -54,25 +67,38 @@ async function updateStudentShortlistStatus(studentId, collegeName, status, requ
       sendType,
       studentEmail,
       studentPhone,
-      isPrimary
+      isPrimary,
     });
 
     console.log(`✅ Status updated successfully for ${collegeName}: ${status}`);
     return status;
   } catch (error) {
-    console.error(`❌ Error updating student status for ${collegeName}:`, error);
+    console.error(
+      `❌ Error updating student status for ${collegeName}:`,
+      error,
+    );
     throw error;
   }
 }
 
-
-async function handleApiError(error, res, studentId, collegeName, payloadData, headers, sendType, studentEmail = null, studentPhone = null, isPrimary = true) {
+async function handleApiError(
+  error,
+  res,
+  studentId,
+  collegeName,
+  payloadData,
+  headers,
+  sendType,
+  studentEmail = null,
+  studentPhone = null,
+  isPrimary = true,
+) {
   console.error(`🚨 API Error for ${collegeName}:`, {
     error: error.message,
     statusCode: error.response?.status,
     isPrimary,
     studentEmail,
-    studentPhone
+    studentPhone,
   });
 
   const errorStatus = "Failed due to Technical Issues";
@@ -88,8 +114,10 @@ async function handleApiError(error, res, studentId, collegeName, payloadData, h
       sendType,
       studentEmail,
       studentPhone,
-      isPrimary
-    ).catch(err => console.error('❌ Failed to update student status on error:', err));
+      isPrimary,
+    ).catch((err) =>
+      console.error("❌ Failed to update student status on error:", err),
+    );
   }
   if (error.response) {
     const statusCode = error.response.status;
@@ -97,7 +125,7 @@ async function handleApiError(error, res, studentId, collegeName, payloadData, h
 
     console.log(`📊 Error Response for ${collegeName}:`, {
       statusCode,
-      response: responseData
+      response: responseData,
     });
 
     if (statusCode === 400 || statusCode === 422) {
@@ -112,15 +140,15 @@ async function handleApiError(error, res, studentId, collegeName, payloadData, h
           sendType,
           studentEmail,
           studentPhone,
-          isPrimary
+          isPrimary,
         );
       }
 
       return res.status(400).json({
         success: false,
-        message: 'Field match issue',
-        status: 'Field Missing',
-        error: responseData
+        message: "Field match issue",
+        status: "Field Missing",
+        error: responseData,
       });
     } else if (statusCode === 409) {
       if (studentId && collegeName) {
@@ -134,58 +162,65 @@ async function handleApiError(error, res, studentId, collegeName, payloadData, h
           sendType,
           studentEmail,
           studentPhone,
-          isPrimary
+          isPrimary,
         );
       }
 
       return res.status(409).json({
         success: false,
-        message: 'Lead already exists',
-        status: 'Do not Proceed',
-        error: responseData
+        message: "Lead already exists",
+        status: "Do not Proceed",
+        error: responseData,
       });
     } else if (statusCode >= 500) {
       return res.status(500).json({
         success: false,
-        message: 'Failed due to technical issue',
+        message: "Failed due to technical issue",
         status: errorStatus,
-        error: responseData
+        error: responseData,
       });
     }
   } else if (error.request) {
     console.error(`⏰ No response received from ${collegeName} API`);
     return res.status(504).json({
       success: false,
-      message: 'No response received from API',
+      message: "No response received from API",
       status: errorStatus,
-      error: 'Gateway Timeout'
+      error: "Gateway Timeout",
     });
   }
 
   return res.status(500).json({
     success: false,
-    message: 'Error sending status to college',
+    message: "Error sending status to college",
     status: errorStatus,
-    error: error.message
+    error: error.message,
   });
 }
 
-
-async function getStudentDataForRequest(studentId, studentData, studentEmail, studentPhone, isPrimary) {
+async function getStudentDataForRequest(
+  studentId,
+  studentData,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`👤 Getting student data:`, {
     studentId,
     hasStudentData: !!studentData,
     isPrimary,
     providedEmail: studentEmail,
-    providedPhone: studentPhone
+    providedPhone: studentPhone,
   });
 
   if (!isPrimary && studentEmail && studentPhone) {
-    console.log(`📞 Using secondary contact details: ${studentEmail}, ${studentPhone}`);
+    console.log(
+      `📞 Using secondary contact details: ${studentEmail}, ${studentPhone}`,
+    );
     return {
       student_email: studentEmail,
       student_phone: studentPhone,
-      student_name: "Parent/Guardian"
+      student_name: "Parent/Guardian",
     };
   }
 
@@ -194,7 +229,7 @@ async function getStudentDataForRequest(studentId, studentData, studentEmail, st
     const student = await Student.findByPk(studentId);
     if (!student) {
       console.error(`❌ Student not found: ${studentId}`);
-      throw new Error('Student not found');
+      throw new Error("Student not found");
     }
     console.log(`✅ Found primary student: ${student.student_email}`);
     return student.toJSON();
@@ -206,13 +241,13 @@ async function getStudentDataForRequest(studentId, studentData, studentEmail, st
   }
 
   console.error(`❌ No student data available`);
-  throw new Error('Either studentId or studentData is required');
+  throw new Error("Either studentId or studentData is required");
 }
 
 function processSpecialUniversityApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing special university response for ${collegeName}:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) {
@@ -226,24 +261,78 @@ function processSpecialUniversityApiResponse(apiResponse, collegeName) {
 
   console.log(`📋 Response analysis:`, { status, message: typeof message });
 
-  if (status !== "Success" || !message || typeof message !== 'object') {
+  if (status !== "Success" || !message || typeof message !== "object") {
     console.error(`❌ Invalid response structure from ${collegeName}`);
     return "Failed due to Technical Issues";
   }
 
-  const result = message.IsCreated === true ? "Proceed" :
-    message.IsCreated === false ? "Do not Proceed" :
-      "Failed due to Technical Issues";
+  const result =
+    message.IsCreated === true
+      ? "Proceed"
+      : message.IsCreated === false
+        ? "Do not Proceed"
+        : "Failed due to Technical Issues";
 
   console.log(`✅ ${collegeName} result: ${result}`);
   return result;
 }
+function processJaypeeApiResponse(apiResponse, collegeName) {
+  console.log(`📊 Processing Jaypee (NoPaperForms) response:`, {
+    status: apiResponse.status,
+    data: apiResponse.data,
+  });
 
+  if (!apiResponse?.data) {
+    console.error(`❌ No response data from ${collegeName}`);
+    return "Failed due to Technical Issues";
+  }
 
+  const responseData = apiResponse.data;
+  const status = responseData.status || responseData.Status;
+  const message = responseData.message || responseData.Message;
+
+  console.log(`📋 Jaypee response analysis:`, { status, message });
+
+  // Handle Jaypee/NoPaperForms specific responses
+  if (status === "Success") {
+    console.log(`✅ ${collegeName}: Lead created successfully`);
+    return "Proceed";
+  }
+
+  if (status === "Duplicate") {
+    console.log(`⚠️ ${collegeName}: Email/Mobile already registered (DND)`);
+    return "Do not Proceed";
+  }
+
+  // Check for duplicate message in text
+  if (message && typeof message === "string") {
+    const msgLower = message.toLowerCase();
+    if (
+      msgLower.includes("already registered") ||
+      msgLower.includes("duplicate") ||
+      msgLower.includes("already exists")
+    ) {
+      console.log(`⚠️ ${collegeName}: Duplicate lead detected`);
+      return "Do not Proceed";
+    }
+
+    if (
+      msgLower.includes("required") ||
+      msgLower.includes("mandatory") ||
+      msgLower.includes("missing")
+    ) {
+      console.log(`⚠️ ${collegeName}: Field missing`);
+      return "Field Missing";
+    }
+  }
+
+  console.error(`❌ ${collegeName}: Failed due to technical issues`);
+  return "Failed due to Technical Issues";
+}
 function processShooliniApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing Shoolini response:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) {
@@ -261,23 +350,21 @@ function processShooliniApiResponse(apiResponse, collegeName) {
     status,
     messageType: typeof message,
     exceptionType,
-    exceptionMessage
+    exceptionMessage,
   });
 
   // ⚠️ Duplicate lead (Email already exists) → Do not Proceed
   if (
     status === "Error" &&
-    (
-      exceptionType === "MXDuplicateEntryException" ||
-      exceptionMessage.includes("already exists")
-    )
+    (exceptionType === "MXDuplicateEntryException" ||
+      exceptionMessage.includes("already exists"))
   ) {
     console.log(`⚠️ Shoolini: Duplicate lead detected`);
     return "Do not Proceed";
   }
 
   // ❌ Invalid / unexpected response
-  if (status !== "Success" || !message || typeof message !== 'object') {
+  if (status !== "Success" || !message || typeof message !== "object") {
     console.error(`❌ Invalid response structure from Shoolini`);
     return "Failed due to Technical Issues";
   }
@@ -294,12 +381,10 @@ function processShooliniApiResponse(apiResponse, collegeName) {
   return result;
 }
 
-
-
 function processManipalApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing Manipal response for ${collegeName}:`, {
     status: apiResponse?.status,
-    data: apiResponse?.data
+    data: apiResponse?.data,
   });
 
   if (!apiResponse?.data) {
@@ -341,14 +426,10 @@ function processManipalApiResponse(apiResponse, collegeName) {
     rawMessage = responseData.Message;
   } else if (typeof responseData.message === "object") {
     rawMessage =
-      responseData.message.Message ||
-      responseData.message.Status ||
-      "";
+      responseData.message.Message || responseData.message.Status || "";
   } else if (typeof responseData.Message === "object") {
     rawMessage =
-      responseData.Message.Message ||
-      responseData.Message.Status ||
-      "";
+      responseData.Message.Message || responseData.Message.Status || "";
   }
 
   const normalizedMessage = String(rawMessage).toLowerCase();
@@ -362,16 +443,10 @@ function processManipalApiResponse(apiResponse, collegeName) {
   return "Failed due to Technical Issues";
 }
 
-
-
-
-
-
-
 function processVivekanandApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing Vivekanand response:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) return "Failed due to Technical Issues";
@@ -380,26 +455,30 @@ function processVivekanandApiResponse(apiResponse, collegeName) {
   const status = responseData.Status || responseData.status;
   const message = responseData.Message;
 
-  if (status !== "Success" || !message || typeof message !== 'object') {
+  if (status !== "Success" || !message || typeof message !== "object") {
     return "Failed due to Technical Issues";
   }
 
-  return message.IsCreated === true ? "Proceed" :
-    message.IsCreated === false ? "Do not Proceed" :
-      "Failed due to Technical Issues";
+  return message.IsCreated === true
+    ? "Proceed"
+    : message.IsCreated === false
+      ? "Do not Proceed"
+      : "Failed due to Technical Issues";
 }
-
 
 function processGLAApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing GLA response:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) return "Failed due to Technical Issues";
 
   const responseData = apiResponse.data;
-  const responseText = typeof responseData === 'string' ? responseData : JSON.stringify(responseData);
+  const responseText =
+    typeof responseData === "string"
+      ? responseData
+      : JSON.stringify(responseData);
 
   console.log(`📋 GLA response text: ${responseText.substring(0, 200)}...`);
 
@@ -408,8 +487,10 @@ function processGLAApiResponse(apiResponse, collegeName) {
     return "Do not Proceed";
   }
 
-  if (responseText.includes("Rgistration successful with UserId:") ||
-    responseText.includes("Registration successful with UserId:")) {
+  if (
+    responseText.includes("Rgistration successful with UserId:") ||
+    responseText.includes("Registration successful with UserId:")
+  ) {
     console.log(`✅ GLA: Registration successful`);
     return "Proceed";
   }
@@ -421,7 +502,7 @@ function processGLAApiResponse(apiResponse, collegeName) {
 function processGalgotiasApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing Galgotias response:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) return "Failed due to Technical Issues";
@@ -434,7 +515,7 @@ function processGalgotiasApiResponse(apiResponse, collegeName) {
   console.log(`📋 Galgotias response:`, {
     code,
     status,
-    message: message.substring(0, 100)
+    message: message.substring(0, 100),
   });
 
   // ❌ Non-200 code → technical issue
@@ -444,10 +525,7 @@ function processGalgotiasApiResponse(apiResponse, collegeName) {
   }
 
   // ⚠️ Email already used → Do not Proceed
-  if (
-    status === false &&
-    message.includes("Email is already being used")
-  ) {
+  if (status === false && message.includes("Email is already being used")) {
     console.log(`⚠️ Galgotias: Email already in use`);
     return "Do not Proceed";
   }
@@ -476,12 +554,10 @@ function processGalgotiasApiResponse(apiResponse, collegeName) {
   return "Failed due to Technical Issues";
 }
 
-
-
 function processAmityOnlineApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing Amity Online response:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) return "Failed due to Technical Issues";
@@ -507,11 +583,10 @@ function processAmityOnlineApiResponse(apiResponse, collegeName) {
   return "Failed due to Technical Issues";
 }
 
-
 function processMangalayatanApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing Mangalayatan response:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) return "Failed due to Technical Issues";
@@ -519,23 +594,26 @@ function processMangalayatanApiResponse(apiResponse, collegeName) {
   const responseData = apiResponse.data;
   const status = apiResponse.status;
 
-  console.log(`📋 Mangalayatan status: ${status}, leadAlreadyExists: ${responseData.leadAlreadyExists}`);
+  console.log(
+    `📋 Mangalayatan status: ${status}, leadAlreadyExists: ${responseData.leadAlreadyExists}`,
+  );
 
   if (status !== 200) {
     console.error(`❌ Mangalayatan: Invalid status ${status}`);
     return "Failed due to Technical Issues";
   }
 
-  return responseData.leadAlreadyExists !== true ? "Proceed" :
-    responseData.leadAlreadyExists === true ? "Do not Proceed" :
-      "Failed due to Technical Issues";
+  return responseData.leadAlreadyExists !== true
+    ? "Proceed"
+    : responseData.leadAlreadyExists === true
+      ? "Do not Proceed"
+      : "Failed due to Technical Issues";
 }
-
 
 function processLPUOnlineApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing LPU Online response:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) return "Failed due to Technical Issues";
@@ -547,11 +625,17 @@ function processLPUOnlineApiResponse(apiResponse, collegeName) {
   console.log(`📋 LPU Online: statusCode=${statusCode}, status=${status}`);
 
   if (statusCode === 200 && status === true && responseData.data?.lead_id) {
-    console.log(`✅ LPU Online: Proceed with lead_id ${responseData.data.lead_id}`);
+    console.log(
+      `✅ LPU Online: Proceed with lead_id ${responseData.data.lead_id}`,
+    );
     return "Proceed";
   }
 
-  if (statusCode === 200 && status === false && (!responseData.data || responseData.data.length === 0)) {
+  if (
+    statusCode === 200 &&
+    status === false &&
+    (!responseData.data || responseData.data.length === 0)
+  ) {
     console.log(`⚠️ LPU Online: Do not Proceed - no data returned`);
     return "Do not Proceed";
   }
@@ -560,11 +644,10 @@ function processLPUOnlineApiResponse(apiResponse, collegeName) {
   return "Failed due to Technical Issues";
 }
 
-
 function processApiResponse(apiResponse, collegeName) {
   console.log(`📊 Processing standard response for ${collegeName}:`, {
     status: apiResponse.status,
-    data: apiResponse.data
+    data: apiResponse.data,
   });
 
   if (!apiResponse?.data) {
@@ -577,15 +660,20 @@ function processApiResponse(apiResponse, collegeName) {
   const statusCode = responseData.statusCode || responseData.code;
   const message = responseData.message || responseData.Message;
 
-  console.log(`📋 Standard response analysis:`, { status, statusCode, message: message?.substring(0, 100) });
+  console.log(`📋 Standard response analysis:`, {
+    status,
+    statusCode,
+    message: message?.substring(0, 100),
+  });
 
   if (!status && !statusCode) {
     console.error(`❌ Invalid response from ${collegeName}`);
     return "Failed due to Technical Issues";
   }
 
-  const isLPU = collegeName?.toLowerCase().includes('lovely professional university') &&
-    !collegeName?.toLowerCase().includes('online');
+  const isLPU =
+    collegeName?.toLowerCase().includes("lovely professional university") &&
+    !collegeName?.toLowerCase().includes("online");
 
   if (isLPU) {
     if (status === "Success") {
@@ -598,7 +686,11 @@ function processApiResponse(apiResponse, collegeName) {
     }
     if (status === "Fail") {
       const messageStr = message?.toString().toLowerCase() || "";
-      if (messageStr.includes("mandatory") || messageStr.includes("required") || messageStr.includes("missing")) {
+      if (
+        messageStr.includes("mandatory") ||
+        messageStr.includes("required") ||
+        messageStr.includes("missing")
+      ) {
         console.log(`⚠️ LPU: Field missing`);
         return "Field Missing";
       }
@@ -626,12 +718,20 @@ function processApiResponse(apiResponse, collegeName) {
   return "Failed due to Technical Issues";
 }
 
-
-async function processStandardUniversity(req, collegeName, userResponse, studentId, sendType, studentEmail, studentPhone, isPrimary) {
+async function processStandardUniversity(
+  req,
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`🔄 Processing standard university: ${collegeName}`, {
     isPrimary,
-    studentEmail: studentEmail || 'Using primary',
-    studentPhone: studentPhone || 'Using primary'
+    studentEmail: studentEmail || "Using primary",
+    studentPhone: studentPhone || "Using primary",
   });
 
   const courseHeaderValue = await findHeaderValue(collegeName);
@@ -643,11 +743,11 @@ async function processStandardUniversity(req, collegeName, userResponse, student
     const valuesMap = new Map(Object.entries(courseHeaderValue.values));
 
     for (const [key, value] of valuesMap.entries()) {
-      if (key === 'API_URL') {
+      if (key === "API_URL") {
         apiUrl = value;
         continue;
       }
-      if (key === 'x-api-key') {
+      if (key === "x-api-key") {
         apiKey = value;
         continue;
       }
@@ -657,12 +757,12 @@ async function processStandardUniversity(req, collegeName, userResponse, student
         continue;
       }
 
-      if (typeof value === 'string' && value.startsWith('student.')) {
-        const userKey = value.replace('student.', '');
+      if (typeof value === "string" && value.startsWith("student.")) {
+        const userKey = value.replace("student.", "");
         const keyMapping = {
-          phone_number: 'student_phone',
-          name: 'student_name',
-          email: 'student_email'
+          phone_number: "student_phone",
+          name: "student_name",
+          email: "student_email",
         };
         const actualKey = keyMapping[userKey] || userKey;
         let userValue = userResponse[actualKey];
@@ -672,9 +772,9 @@ async function processStandardUniversity(req, collegeName, userResponse, student
         }
 
         if (!isPrimary) {
-          if (actualKey === 'student_email' && studentEmail) {
+          if (actualKey === "student_email" && studentEmail) {
             userValue = studentEmail;
-          } else if (actualKey === 'student_phone' && studentPhone) {
+          } else if (actualKey === "student_phone" && studentPhone) {
             userValue = studentPhone;
           }
         }
@@ -687,35 +787,37 @@ async function processStandardUniversity(req, collegeName, userResponse, student
   }
 
   if (!apiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const headers = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
 
   if (apiKey) {
-    headers['x-api-key'] = apiKey;
+    headers["x-api-key"] = apiKey;
   }
 
   const finalPayload = {
     ...transformedData,
-    ...(transformedData.secret_key === "b061b6abae687fbd43e1bc2260c04b6a" && { field_session: "Session 2026" })
+    ...(transformedData.secret_key === "b061b6abae687fbd43e1bc2260c04b6a" && {
+      field_session: "Session 2026",
+    }),
   };
 
   console.log(`📤 Sending to ${collegeName}:`, {
     url: apiUrl,
     headers: Object.keys(headers),
-    payload: finalPayload
+    payload: finalPayload,
   });
 
   try {
     const apiResponse = await axios({
-      method: 'POST',
+      method: "POST",
       url: apiUrl,
       headers: headers,
       data: finalPayload,
-      timeout: 15000
+      timeout: 15000,
     });
 
     const statusResult = processApiResponse(apiResponse, collegeName);
@@ -731,7 +833,7 @@ async function processStandardUniversity(req, collegeName, userResponse, student
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
@@ -751,13 +853,12 @@ async function processStandardUniversity(req, collegeName, userResponse, student
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
     throw error;
   }
 }
-
 
 async function handleShooliniOnline(
   collegeName,
@@ -766,19 +867,19 @@ async function handleShooliniOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary
+  isPrimary,
 ) {
   console.log(`🎯 Handling Shoolini University Online`, {
     collegeName,
     isPrimary,
     studentEmail,
-    studentPhone
+    studentPhone,
   });
 
   const courseHeaderValue = await findHeaderValue(collegeName);
 
   if (!courseHeaderValue?.values) {
-    throw new Error('Course header values not found');
+    throw new Error("Course header values not found");
   }
 
   const values = courseHeaderValue.values;
@@ -788,13 +889,13 @@ async function handleShooliniOnline(
   const leadUpdateBehavior = values.LeadUpdateBehavior;
 
   if (!baseApiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const queryParams = new URLSearchParams({
     accessKey,
     secretKey,
-    LeadUpdateBehavior: leadUpdateBehavior
+    LeadUpdateBehavior: leadUpdateBehavior,
   });
 
   const fullApiUrl = `${baseApiUrl}?${queryParams.toString()}`;
@@ -803,23 +904,25 @@ async function handleShooliniOnline(
   console.log(`🔗 Shoolini API URL: ${fullApiUrl}`);
 
   for (const [key, value] of Object.entries(values)) {
-    if (['API_URL', 'accessKey', 'secretKey', 'LeadUpdateBehavior'].includes(key)) {
+    if (
+      ["API_URL", "accessKey", "secretKey", "LeadUpdateBehavior"].includes(key)
+    ) {
       continue;
     }
 
     let finalValue;
 
     if (!isPrimary) {
-      if (key === 'EmailAddress' && studentEmail) {
+      if (key === "EmailAddress" && studentEmail) {
         finalValue = studentEmail;
-      } else if (key === 'Phone' && studentPhone) {
+      } else if (key === "Phone" && studentPhone) {
         finalValue = studentPhone;
-      } else if (typeof value === 'string' && value.startsWith('student.')) {
-        const userKey = value.replace('student.', '');
+      } else if (typeof value === "string" && value.startsWith("student.")) {
+        const userKey = value.replace("student.", "");
         const mapping = {
           phone_number: "student_phone",
           name: "student_name",
-          email: "student_email"
+          email: "student_email",
         };
         const actualKey = mapping[userKey] || userKey;
         finalValue = userResponse[actualKey] || "";
@@ -827,14 +930,14 @@ async function handleShooliniOnline(
         finalValue = value;
       }
     } else {
-      if (typeof value === 'string' && value.startsWith('student.')) {
-        const userKey = value.replace('student.', '');
+      if (typeof value === "string" && value.startsWith("student.")) {
+        const userKey = value.replace("student.", "");
         const mapping = {
           phone_number: "student_phone",
           preferred_state: "preferredState",
           name: "student_name",
           email: "student_email",
-          preferred_city: "preferred_city"
+          preferred_city: "preferred_city",
         };
         const actualKey = mapping[userKey] || userKey;
         let userValue = userResponse[actualKey];
@@ -848,8 +951,8 @@ async function handleShooliniOnline(
         } else if (actualKey === "preferredCity") {
           finalValue =
             userValue?.trim() &&
-              !userValue.toLowerCase().includes('himachal') &&
-              !userValue.toLowerCase().includes('pradesh')
+            !userValue.toLowerCase().includes("himachal") &&
+            !userValue.toLowerCase().includes("pradesh")
               ? userValue
               : "Solan";
         } else if (actualKey === "phoneNumber" && userValue) {
@@ -864,28 +967,28 @@ async function handleShooliniOnline(
 
     shooliniPayload.push({
       Attribute: key,
-      Value: finalValue
+      Value: finalValue,
     });
   }
 
   const headers = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
 
   console.log(`📤 Sending to Shoolini:`, {
     url: fullApiUrl,
     payload: shooliniPayload,
     isPrimary,
-    studentEmail: studentEmail || userResponse.student_email
+    studentEmail: studentEmail || userResponse.student_email,
   });
 
   try {
     const apiResponse = await axios({
-      method: 'POST',
+      method: "POST",
       url: fullApiUrl,
       headers,
       data: shooliniPayload,
-      timeout: 15000
+      timeout: 15000,
     });
 
     const statusResult = processShooliniApiResponse(apiResponse, collegeName);
@@ -901,12 +1004,11 @@ async function handleShooliniOnline(
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
     return statusResult;
-
   } catch (error) {
     // 🔥 CRITICAL FIX: Handle LeadSquared business errors sent as HTTP 500
     if (error.response && error.response.data) {
@@ -914,7 +1016,7 @@ async function handleShooliniOnline(
 
       const statusResult = processShooliniApiResponse(
         error.response,
-        collegeName
+        collegeName,
       );
 
       if (studentId) {
@@ -928,7 +1030,7 @@ async function handleShooliniOnline(
           sendType,
           studentEmail || userResponse.student_email,
           studentPhone || userResponse.student_phone,
-          isPrimary
+          isPrimary,
         );
       }
 
@@ -940,66 +1042,249 @@ async function handleShooliniOnline(
     throw error;
   }
 }
+async function handleJaypeeNoPaperForms(
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
+  console.log(`🎯 Handling Jaypee NoPaperForms API: ${collegeName}`, {
+    isPrimary,
+  });
 
+  const courseHeaderValue = await findHeaderValue(collegeName);
 
+  if (!courseHeaderValue?.values) {
+    throw new Error("Course header values not found");
+  }
 
+  const values = courseHeaderValue.values;
+  const apiUrl = values.API_URL;
 
-async function handleSpecialUniversity(collegeName, userResponse, studentId, sendType, studentEmail, studentPhone, isPrimary) {
+  if (!apiUrl) {
+    throw new Error("API URL not found in the course header values");
+  }
+
+  // Prepare form data for x-www-form-urlencoded
+  const formData = new URLSearchParams();
+
+  // Add all required fields from header values
+  for (const [key, value] of Object.entries(values)) {
+    if (key === "API_URL") continue;
+
+    let finalValue;
+
+    if (typeof value === "string" && value.startsWith("student.")) {
+      const userKey = value.replace("student.", "");
+      const mapping = {
+        student_name: "student_name",
+        student_email: "student_email",
+        student_phone: "student_phone",
+      };
+      const actualKey = mapping[userKey] || userKey;
+
+      // Use secondary contact details if provided and not primary
+      if (!isPrimary) {
+        if (actualKey === "student_email" && studentEmail) {
+          finalValue = studentEmail;
+        } else if (actualKey === "student_phone" && studentPhone) {
+          finalValue = studentPhone;
+        } else {
+          finalValue = userResponse[actualKey] || "";
+        }
+      } else {
+        finalValue = userResponse[actualKey] || "";
+      }
+    } else {
+      finalValue = value;
+    }
+
+    // Handle dynamic values for medium and campaign
+    if (
+      key === "medium" &&
+      finalValue === "Dynamic value as per the Publisher"
+    ) {
+      finalValue = "website"; // Default value or get from your system
+    }
+
+    if (
+      key === "campaign" &&
+      finalValue === "Dynamic value as per the Publisher"
+    ) {
+      finalValue = "default_campaign"; // Default value or get from your system
+    }
+
+    formData.append(key, finalValue);
+  }
+
+  const headers = {
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+
+  console.log(`📤 Sending to Jaypee (NoPaperForms):`, {
+    url: apiUrl,
+    isPrimary,
+    email:
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
+    phone:
+      !isPrimary && studentPhone ? studentPhone : userResponse.student_phone,
+  });
+
+  try {
+    const apiResponse = await axios({
+      method: "POST",
+      url: apiUrl,
+      headers: headers,
+      data: formData.toString(),
+      timeout: 15000,
+    });
+
+    const statusResult = processJaypeeApiResponse(apiResponse, collegeName);
+
+    if (studentId) {
+      await updateStudentShortlistStatus(
+        studentId,
+        collegeName,
+        statusResult,
+        Object.fromEntries(formData),
+        apiResponse.data,
+        headers,
+        sendType,
+        studentEmail || userResponse.student_email,
+        studentPhone || userResponse.student_phone,
+        isPrimary,
+      );
+    }
+
+    return statusResult;
+  } catch (error) {
+    console.error(`❌ Jaypee NoPaperForms API error:`, error.message);
+
+    // Handle specific NoPaperForms errors
+    if (error.response?.data) {
+      const statusResult = processJaypeeApiResponse(
+        error.response,
+        collegeName,
+      );
+
+      if (studentId) {
+        await updateStudentShortlistStatus(
+          studentId,
+          collegeName,
+          statusResult,
+          Object.fromEntries(formData),
+          error.response.data,
+          headers,
+          sendType,
+          studentEmail || userResponse.student_email,
+          studentPhone || userResponse.student_phone,
+          isPrimary,
+        );
+      }
+
+      return statusResult;
+    }
+
+    throw error;
+  }
+}
+async function handleSpecialUniversity(
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`🎯 Handling special university: ${collegeName}`, {
     isPrimary,
     studentEmail,
-    studentPhone
+    studentPhone,
   });
 
   const specialPayload = [
     { Attribute: "FirstName", Value: userResponse.student_name || "" },
     { Attribute: "LastName", value: "" },
-    { Attribute: "EmailAddress", Value: !isPrimary && studentEmail ? studentEmail : userResponse.student_email || "" },
-    { Attribute: "Phone", Value: !isPrimary && studentPhone ? studentPhone : userResponse.student_phone || "" },
+    {
+      Attribute: "EmailAddress",
+      Value:
+        !isPrimary && studentEmail
+          ? studentEmail
+          : userResponse.student_email || "",
+    },
+    {
+      Attribute: "Phone",
+      Value:
+        !isPrimary && studentPhone
+          ? studentPhone
+          : userResponse.student_phone || "",
+    },
     { Attribute: "Source", Value: "nuvora" },
     { Attribute: "SourceCampaign", Value: "" },
     { Attribute: "SourceMedium", Value: "" },
-    { Attribute: "mx_Campus", Value: collegeName.includes("Chandigarh University") ? "Mohali" : "Gurgaon" },
+    {
+      Attribute: "mx_Campus",
+      Value: collegeName.includes("Chandigarh University")
+        ? "Mohali"
+        : "Gurgaon",
+    },
     { Attribute: "mx_Course2", Value: "Btech" },
     { Attribute: "mx_State", Value: "Delhi" },
-    { Attribute: "mx_City", Value: "West Delhi" }
+    { Attribute: "mx_City", Value: "West Delhi" },
   ];
 
   const courseHeaderValue = await findHeaderValue(collegeName);
-  const apiUrl = courseHeaderValue?.values?.API_URL || courseHeaderValue?.values?.['api-url'];
-  const apiKey = courseHeaderValue?.values?.['x-api-key'];
-  const apiKey1 = courseHeaderValue?.values?.['secret-key'];
-  const apiKey2 = courseHeaderValue?.values?.['access-key'];
+  const apiUrl =
+    courseHeaderValue?.values?.API_URL ||
+    courseHeaderValue?.values?.["api-url"];
+  const apiKey = courseHeaderValue?.values?.["x-api-key"];
+  const apiKey1 = courseHeaderValue?.values?.["secret-key"];
+  const apiKey2 = courseHeaderValue?.values?.["access-key"];
 
   if (!apiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const headers = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
 
-  if (apiKey) headers['x-api-key'] = apiKey;
-  if (apiKey1) headers['secret-key'] = apiKey1;
-  if (apiKey2) headers['access-key'] = apiKey2;
+  if (apiKey) headers["x-api-key"] = apiKey;
+  if (apiKey1) headers["secret-key"] = apiKey1;
+  if (apiKey2) headers["access-key"] = apiKey2;
 
   console.log(`📤 Sending to special university:`, {
     url: apiUrl,
     headers: Object.keys(headers),
     isPrimary,
-    email: !isPrimary && studentEmail ? studentEmail : userResponse.student_email
+    email:
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
   });
 
   try {
-    const apiResponse = await axios({
-      method: 'POST',
+    console.log("hello", {
+      method: "POST",
       url: apiUrl,
       headers: headers,
       data: specialPayload,
-      timeout: 15000
+      timeout: 15000,
+    });
+    const apiResponse = await axios({
+      method: "POST",
+      url: apiUrl,
+      headers: headers,
+      data: specialPayload,
+      timeout: 15000,
     });
 
-    const statusResult = processSpecialUniversityApiResponse(apiResponse, collegeName);
+    const statusResult = processSpecialUniversityApiResponse(
+      apiResponse,
+      collegeName,
+    );
 
     if (studentId) {
       await updateStudentShortlistStatus(
@@ -1012,7 +1297,7 @@ async function handleSpecialUniversity(collegeName, userResponse, studentId, sen
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
@@ -1023,55 +1308,82 @@ async function handleSpecialUniversity(collegeName, userResponse, studentId, sen
   }
 }
 
-
-async function handleManipalOnline(collegeName, userResponse, studentId, sendType, studentEmail, studentPhone, isPrimary) {
+async function handleManipalOnline(
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`🎯 Handling Manipal Online: ${collegeName}`, { isPrimary });
-  console.log(userResponse)
+  console.log(userResponse);
   const manipalPayload = [
     { Attribute: "FirstName", Value: userResponse.student_name || "" },
-    { Attribute: "EmailAddress", Value: !isPrimary && studentEmail ? studentEmail : userResponse.student_email || "" },
-    { Attribute: "Phone", Value: !isPrimary && studentPhone ? `${studentPhone}` : `${userResponse.student_phone}` || "" },
+    {
+      Attribute: "EmailAddress",
+      Value:
+        !isPrimary && studentEmail
+          ? studentEmail
+          : userResponse.student_email || "",
+    },
+    {
+      Attribute: "Phone",
+      Value:
+        !isPrimary && studentPhone
+          ? `${studentPhone}`
+          : `${userResponse.student_phone}` || "",
+    },
     { Attribute: "mx_course_applying_for", Value: "BBA" },
     { Attribute: "Source", Value: "Agents" },
     { Attribute: "Source Medium", Value: " NEPL" },
-    { Attribute: "mx_Mobile", Value: userResponse.student_phone ? `+91-${userResponse.student_phone}` : "+91-9782135259" },
-    { Attribute: "mx_Enquired_University", Value: "MUJ" }
+    {
+      Attribute: "mx_Mobile",
+      Value: userResponse.student_phone
+        ? `+91-${userResponse.student_phone}`
+        : "+91-9782135259",
+    },
+    { Attribute: "mx_Enquired_University", Value: "MUJ" },
   ];
 
   const courseHeaderValue = await findHeaderValue(collegeName);
-  const apiUrl = courseHeaderValue?.values?.API_URL || courseHeaderValue?.values?.['api-url'];
-  const apiKey = courseHeaderValue?.values?.['x-api-key'];
-  const apiKey1 = courseHeaderValue?.values?.['secret-key'];
-  const apiKey2 = courseHeaderValue?.values?.['access-key'];
+  const apiUrl =
+    courseHeaderValue?.values?.API_URL ||
+    courseHeaderValue?.values?.["api-url"];
+  const apiKey = courseHeaderValue?.values?.["x-api-key"];
+  const apiKey1 = courseHeaderValue?.values?.["secret-key"];
+  const apiKey2 = courseHeaderValue?.values?.["access-key"];
 
   if (!apiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const headers = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
 
-  if (apiKey) headers['x-api-key'] = apiKey;
-  if (apiKey1) headers['secret-key'] = apiKey1;
-  if (apiKey2) headers['access-key'] = apiKey2;
+  if (apiKey) headers["x-api-key"] = apiKey;
+  if (apiKey1) headers["secret-key"] = apiKey1;
+  if (apiKey2) headers["access-key"] = apiKey2;
 
   console.log(`📤 Sending to Manipal:`, {
     url: apiUrl,
     isPrimary,
-    email: !isPrimary && studentEmail ? studentEmail : userResponse.student_email
+    email:
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
   });
 
   try {
-    console.log("hello", manipalPayload, apiUrl, headers)
+    console.log("hello", manipalPayload, apiUrl, headers);
     const apiResponse = await axios({
-      method: 'POST',
+      method: "POST",
       url: apiUrl,
       headers: headers,
       data: manipalPayload,
-      timeout: 15000
+      timeout: 15000,
     });
-    console.log(apiResponse, "api.response")
+    console.log(apiResponse, "api.response");
     const statusResult = processManipalApiResponse(apiResponse, collegeName);
 
     if (studentId) {
@@ -1085,7 +1397,7 @@ async function handleManipalOnline(collegeName, userResponse, studentId, sendTyp
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
@@ -1096,54 +1408,81 @@ async function handleManipalOnline(collegeName, userResponse, studentId, sendTyp
   }
 }
 
-
-async function handleVivekanandGlobal(collegeName, userResponse, studentId, sendType, studentEmail, studentPhone, isPrimary) {
+async function handleVivekanandGlobal(
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`🎯 Handling Vivekanand Global: ${collegeName}`, { isPrimary });
 
   const vivekanandPayload = [
     { Attribute: "FirstName", Value: userResponse.student_name || "" },
-    { Attribute: "EmailAddress", Value: !isPrimary && studentEmail ? studentEmail : userResponse.student_email || "" },
-    { Attribute: "Phone", Value: !isPrimary && studentPhone ? `+91 ${studentPhone}` : userResponse.student_phone ? `+91 ${userResponse.student_phone}` : "" },
+    {
+      Attribute: "EmailAddress",
+      Value:
+        !isPrimary && studentEmail
+          ? studentEmail
+          : userResponse.student_email || "",
+    },
+    {
+      Attribute: "Phone",
+      Value:
+        !isPrimary && studentPhone
+          ? `+91 ${studentPhone}`
+          : userResponse.student_phone
+            ? `+91 ${userResponse.student_phone}`
+            : "",
+    },
     { Attribute: "ProspectID", Value: "45b5fded-e696-45a6-9fbb-c6af6178229e" },
     { Attribute: "SearchBy", Value: "Phone" },
-    { Attribute: "RelatedCompanyId", Value: "82a19544-ef4f4cef-a09c-d68b939742f9" },
+    {
+      Attribute: "RelatedCompanyId",
+      Value: "82a19544-ef4f4cef-a09c-d68b939742f9",
+    },
     { Attribute: "mx_Program", Value: "UG" },
     { Attribute: "mx_Course_Name", Value: "Bachelor of Computer Applications" },
     { Attribute: "mx_Elective_Specilization_pool", Value: "Block Chain " },
-    { Attribute: "Source", Value: "Nuvora" }
+    { Attribute: "Source", Value: "Nuvora" },
   ];
 
   const courseHeaderValue = await findHeaderValue(collegeName);
-  const apiUrl = courseHeaderValue?.values?.API_URL || courseHeaderValue?.values?.['api-url'];
-  const apiKey = courseHeaderValue?.values?.['x-api-key'];
-  const apiKey1 = courseHeaderValue?.values?.['secret-key'];
-  const apiKey2 = courseHeaderValue?.values?.['access-key'];
+  const apiUrl =
+    courseHeaderValue?.values?.API_URL ||
+    courseHeaderValue?.values?.["api-url"];
+  const apiKey = courseHeaderValue?.values?.["x-api-key"];
+  const apiKey1 = courseHeaderValue?.values?.["secret-key"];
+  const apiKey2 = courseHeaderValue?.values?.["access-key"];
 
   if (!apiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const headers = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
 
-  if (apiKey) headers['x-api-key'] = apiKey;
-  if (apiKey1) headers['secret-key'] = apiKey1;
-  if (apiKey2) headers['access-key'] = apiKey2;
+  if (apiKey) headers["x-api-key"] = apiKey;
+  if (apiKey1) headers["secret-key"] = apiKey1;
+  if (apiKey2) headers["access-key"] = apiKey2;
 
   console.log(`📤 Sending to Vivekanand Global:`, {
     url: apiUrl,
     isPrimary,
-    email: !isPrimary && studentEmail ? studentEmail : userResponse.student_email
+    email:
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
   });
 
   try {
     const apiResponse = await axios({
-      method: 'POST',
+      method: "POST",
       url: apiUrl,
       headers: headers,
       data: vivekanandPayload,
-      timeout: 15000
+      timeout: 15000,
     });
 
     const statusResult = processVivekanandApiResponse(apiResponse, collegeName);
@@ -1159,7 +1498,7 @@ async function handleVivekanandGlobal(collegeName, userResponse, studentId, send
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
@@ -1170,52 +1509,68 @@ async function handleVivekanandGlobal(collegeName, userResponse, studentId, send
   }
 }
 
-
-async function handleLPUOnline(collegeName, userResponse, studentId, sendType, studentEmail, studentPhone, isPrimary) {
+async function handleLPUOnline(
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`🎯 Handling LPU Online: ${collegeName}`, { isPrimary });
 
   const lpuOnlinePayload = {
-    "source": "324RJ0174",
-    "name": `${userResponse.student_name || ""} ${""}`.trim(),
-    "email": !isPrimary && studentEmail ? studentEmail : userResponse.student_email || "",
-    "mobile": !isPrimary && studentPhone ? studentPhone : userResponse.student_phone || "",
-    "state": "delhi",
-    "city": "West Delhi",
-    "field_new_specialization_for_new_widgets": "BBA",
-    "field_new_specialization": "BBA"
+    source: "324RJ0174",
+    name: `${userResponse.student_name || ""} ${""}`.trim(),
+    email:
+      !isPrimary && studentEmail
+        ? studentEmail
+        : userResponse.student_email || "",
+    mobile:
+      !isPrimary && studentPhone
+        ? studentPhone
+        : userResponse.student_phone || "",
+    state: "delhi",
+    city: "West Delhi",
+    field_new_specialization_for_new_widgets: "BBA",
+    field_new_specialization: "BBA",
   };
 
   const courseHeaderValue = await findHeaderValue(collegeName);
-  const apiUrl = courseHeaderValue?.values?.API_URL || courseHeaderValue?.values?.['api-url'];
-  const apiKey1 = courseHeaderValue?.values?.['secret-key'];
-  const apiKey2 = courseHeaderValue?.values?.['access-key'];
+  const apiUrl =
+    courseHeaderValue?.values?.API_URL ||
+    courseHeaderValue?.values?.["api-url"];
+  const apiKey1 = courseHeaderValue?.values?.["secret-key"];
+  const apiKey2 = courseHeaderValue?.values?.["access-key"];
 
   if (!apiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const headers = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
 
   if (apiKey1 || apiKey2) {
-    headers['secret-key'] = "f048d44ade6e3f910a8e5fe407b3b5fc";
-    headers['access-key'] = "3344c49e16f54991b9c8e528a0ba0041";
+    headers["secret-key"] = "f048d44ade6e3f910a8e5fe407b3b5fc";
+    headers["access-key"] = "3344c49e16f54991b9c8e528a0ba0041";
   }
 
   console.log(`📤 Sending to LPU Online:`, {
     url: apiUrl,
     isPrimary,
-    email: !isPrimary && studentEmail ? studentEmail : userResponse.student_email
+    email:
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
   });
 
   try {
     const apiResponse = await axios({
-      method: 'POST',
+      method: "POST",
       url: apiUrl,
       headers: headers,
       data: lpuOnlinePayload,
-      timeout: 15000
+      timeout: 15000,
     });
 
     const statusResult = processLPUOnlineApiResponse(apiResponse, collegeName);
@@ -1231,7 +1586,7 @@ async function handleLPUOnline(collegeName, userResponse, studentId, sendType, s
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
@@ -1242,25 +1597,40 @@ async function handleLPUOnline(collegeName, userResponse, studentId, sendType, s
   }
 }
 
-
-async function handleGLAOnline(collegeName, userResponse, studentId, sendType, studentEmail, studentPhone, isPrimary) {
+async function handleGLAOnline(
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`🎯 Handling GLA Online: ${collegeName}`, { isPrimary });
 
   const courseHeaderValue = await findHeaderValue(collegeName);
-  const baseApiUrl = courseHeaderValue?.values?.API_URL || courseHeaderValue?.values?.['api-url'];
+  const baseApiUrl =
+    courseHeaderValue?.values?.API_URL ||
+    courseHeaderValue?.values?.["api-url"];
 
   if (!baseApiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const queryParams = new URLSearchParams({
     Name: sanitizeStudentName(userResponse.student_name) || "Harsh",
     DOB: "01/01/2000",
-    EmailId: !isPrimary && studentEmail ? studentEmail : userResponse.student_email || "",
-    Mobile: !isPrimary && studentPhone ? studentPhone : userResponse.student_phone || "",
+    EmailId:
+      !isPrimary && studentEmail
+        ? studentEmail
+        : userResponse.student_email || "",
+    Mobile:
+      !isPrimary && studentPhone
+        ? studentPhone
+        : userResponse.student_phone || "",
     ProgramCode: "OGLABBA201",
     source: "Nuvora_Education_Pvt_Ltd",
-    City: "0"
+    City: "0",
   });
 
   const fullApiUrl = `${baseApiUrl}?${queryParams.toString()}`;
@@ -1269,14 +1639,15 @@ async function handleGLAOnline(collegeName, userResponse, studentId, sendType, s
   console.log(`📤 Sending to GLA Online:`, {
     url: fullApiUrl,
     isPrimary,
-    email: !isPrimary && studentEmail ? studentEmail : userResponse.student_email
+    email:
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
   });
 
   try {
     const apiResponse = await axios({
-      method: 'GET',
+      method: "GET",
       url: fullApiUrl,
-      timeout: 15000
+      timeout: 15000,
     });
 
     const statusResult = processGLAApiResponse(apiResponse, collegeName);
@@ -1286,13 +1657,13 @@ async function handleGLAOnline(collegeName, userResponse, studentId, sendType, s
         studentId,
         collegeName,
         statusResult,
-        { url: fullApiUrl, method: 'GET' },
+        { url: fullApiUrl, method: "GET" },
         apiResponse.data,
         headers,
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
@@ -1340,51 +1711,50 @@ async function handleGalgotiasOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary
+  isPrimary,
 ) {
   console.log(`🎯 Handling Galgotias Online: ${collegeName}`, { isPrimary });
 
   const courseHeaderValue = await findHeaderValue(collegeName);
 
   if (!courseHeaderValue?.values) {
-    throw new Error('Course header values not found');
+    throw new Error("Course header values not found");
   }
 
   const apiUrl =
-    courseHeaderValue.values.API_URL ||
-    courseHeaderValue?.values?.['api-url'];
+    courseHeaderValue.values.API_URL || courseHeaderValue?.values?.["api-url"];
 
-  const secretKey = courseHeaderValue.values['Secret-key'];
-  const accessKey = courseHeaderValue.values['Access-key'];
+  const secretKey = courseHeaderValue.values["Secret-key"];
+  const accessKey = courseHeaderValue.values["Access-key"];
 
   if (!apiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const headers = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
 
-  if (secretKey) headers['Secret-key'] = secretKey.trim();
-  if (accessKey) headers['Access-key'] = accessKey;
+  if (secretKey) headers["Secret-key"] = secretKey.trim();
+  if (accessKey) headers["Access-key"] = accessKey;
 
   const transformedPayload = {};
 
   for (const [key, value] of Object.entries(courseHeaderValue.values)) {
-    if (['API_URL', 'Secret-key', 'Access-key'].includes(key)) continue;
+    if (["API_URL", "Secret-key", "Access-key"].includes(key)) continue;
 
-    if (typeof value === 'string' && value.startsWith('student.')) {
-      const userKey = value.replace('student.', '');
+    if (typeof value === "string" && value.startsWith("student.")) {
+      const userKey = value.replace("student.", "");
 
       const mapping = {
-        phone_number: 'student_phone',
-        name: 'student_name',
-        email: 'student_email'
+        phone_number: "student_phone",
+        name: "student_name",
+        email: "student_email",
       };
 
       const actualKey = mapping[userKey] || userKey;
 
-      if (actualKey === 'student_phone') {
+      if (actualKey === "student_phone") {
         const phoneToUse =
           !isPrimary && studentPhone
             ? studentPhone
@@ -1394,14 +1764,14 @@ async function handleGalgotiasOnline(
         continue;
       }
 
-      if (actualKey === 'student_name') {
+      if (actualKey === "student_name") {
         transformedPayload[key] = sanitizeStudentName(
-          userResponse.student_name
+          userResponse.student_name,
         );
         continue;
       }
 
-      if (actualKey === 'student_email') {
+      if (actualKey === "student_email") {
         transformedPayload[key] =
           !isPrimary && studentEmail
             ? studentEmail
@@ -1410,7 +1780,6 @@ async function handleGalgotiasOnline(
       }
 
       transformedPayload[key] = userResponse[actualKey] || "";
-
     } else {
       transformedPayload[key] = value;
     }
@@ -1421,24 +1790,19 @@ async function handleGalgotiasOnline(
     isPrimary,
     phone: transformedPayload?.mobile || transformedPayload?.phone,
     email:
-      !isPrimary && studentEmail
-        ? studentEmail
-        : userResponse.student_email
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
   });
 
   try {
     const apiResponse = await axios({
-      method: 'POST',
+      method: "POST",
       url: apiUrl,
       headers,
       data: transformedPayload,
-      timeout: 15000
+      timeout: 15000,
     });
 
-    const statusResult = processGalgotiasApiResponse(
-      apiResponse,
-      collegeName
-    );
+    const statusResult = processGalgotiasApiResponse(apiResponse, collegeName);
 
     if (studentId) {
       await updateStudentShortlistStatus(
@@ -1451,45 +1815,51 @@ async function handleGalgotiasOnline(
         sendType,
         studentEmail || userResponse.student_email,
         normalizePhoneNumber(studentPhone || userResponse.student_phone),
-        isPrimary
+        isPrimary,
       );
     }
 
     return statusResult;
-
   } catch (error) {
     console.error(`❌ Galgotias API error:`, error.message);
     throw error;
   }
 }
 
-
-
-async function handleAmityOnline(collegeName, userResponse, studentId, sendType, studentEmail, studentPhone, isPrimary) {
+async function handleAmityOnline(
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`🎯 Handling Amity Online: ${collegeName}`, { isPrimary });
 
   const courseHeaderValue = await findHeaderValue(collegeName);
 
   if (!courseHeaderValue?.values) {
-    throw new Error('Course header values not found');
+    throw new Error("Course header values not found");
   }
 
-  const apiUrl = courseHeaderValue.values.API_URL || courseHeaderValue?.values?.['api-url'];
-  const apiKey = courseHeaderValue.values['x-api-key'];
+  const apiUrl =
+    courseHeaderValue.values.API_URL || courseHeaderValue?.values?.["api-url"];
+  const apiKey = courseHeaderValue.values["x-api-key"];
 
   if (!apiUrl) {
-    throw new Error('API URL not found in the course header values');
+    throw new Error("API URL not found in the course header values");
   }
 
   const headers = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
 
-  if (apiKey) headers['x-api-key'] = apiKey;
+  if (apiKey) headers["x-api-key"] = apiKey;
 
   const transformedPayload = {};
   for (const [key, value] of Object.entries(courseHeaderValue.values)) {
-    if (key === 'API_URL' || key === 'x-api-key') continue;
+    if (key === "API_URL" || key === "x-api-key") continue;
 
     if (key === "mx_AMS_ID") {
       transformedPayload[key] = Number(value);
@@ -1500,20 +1870,20 @@ async function handleAmityOnline(collegeName, userResponse, studentId, sendType,
       continue;
     }
 
-    if (typeof value === 'string' && value.startsWith('student.')) {
-      const userKey = value.replace('student.', '');
+    if (typeof value === "string" && value.startsWith("student.")) {
+      const userKey = value.replace("student.", "");
       const mapping = {
         phone_number: "student_phone",
         name: "student_name",
-        email: "student_email"
+        email: "student_email",
       };
       const actualKey = mapping[userKey] || userKey;
 
       // For secondary contacts, override with provided email/phone
       if (!isPrimary) {
-        if (actualKey === 'student_email' && studentEmail) {
+        if (actualKey === "student_email" && studentEmail) {
           transformedPayload[key] = studentEmail;
-        } else if (actualKey === 'student_phone' && studentPhone) {
+        } else if (actualKey === "student_phone" && studentPhone) {
           transformedPayload[key] = studentPhone;
         } else {
           transformedPayload[key] = userResponse[actualKey] || "";
@@ -1529,19 +1899,23 @@ async function handleAmityOnline(collegeName, userResponse, studentId, sendType,
   console.log(`📤 Sending to Amity Online:`, {
     url: apiUrl,
     isPrimary,
-    email: !isPrimary && studentEmail ? studentEmail : userResponse.student_email
+    email:
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
   });
 
   try {
     const apiResponse = await axios({
-      method: 'POST',
+      method: "POST",
       url: apiUrl,
       headers: headers,
       data: transformedPayload,
-      timeout: 15000
+      timeout: 15000,
     });
 
-    const statusResult = processAmityOnlineApiResponse(apiResponse, collegeName);
+    const statusResult = processAmityOnlineApiResponse(
+      apiResponse,
+      collegeName,
+    );
 
     if (studentId) {
       await updateStudentShortlistStatus(
@@ -1554,7 +1928,7 @@ async function handleAmityOnline(collegeName, userResponse, studentId, sendType,
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
@@ -1565,8 +1939,15 @@ async function handleAmityOnline(collegeName, userResponse, studentId, sendType,
   }
 }
 
-
-async function handleMangalayatanOnline(collegeName, userResponse, studentId, sendType, studentEmail, studentPhone, isPrimary) {
+async function handleMangalayatanOnline(
+  collegeName,
+  userResponse,
+  studentId,
+  sendType,
+  studentEmail,
+  studentPhone,
+  isPrimary,
+) {
   console.log(`🎯 Handling Mangalayatan Online: ${collegeName}`, { isPrimary });
 
   const courseHeaderValue = await findHeaderValue(collegeName);
@@ -1596,7 +1977,7 @@ async function handleMangalayatanOnline(collegeName, userResponse, studentId, se
         preferred_state: "preferredState",
         name: "student_name",
         email: "student_email",
-        preferred_city: "preferred_city"
+        preferred_city: "preferred_city",
       };
       const actualKey = mapping[userKey] || userKey;
 
@@ -1607,9 +1988,9 @@ async function handleMangalayatanOnline(collegeName, userResponse, studentId, se
       }
 
       if (!isPrimary) {
-        if (actualKey === 'student_email' && studentEmail) {
+        if (actualKey === "student_email" && studentEmail) {
           userValue = studentEmail;
-        } else if (actualKey === 'student_phone' && studentPhone) {
+        } else if (actualKey === "student_phone" && studentPhone) {
           userValue = studentPhone;
         }
       }
@@ -1631,22 +2012,26 @@ async function handleMangalayatanOnline(collegeName, userResponse, studentId, se
   }
 
   const headers = {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
   };
 
   console.log(`📤 Sending to Mangalayatan:`, {
     url: baseApiUrl,
     isPrimary,
-    email: !isPrimary && studentEmail ? studentEmail : userResponse.student_email
+    email:
+      !isPrimary && studentEmail ? studentEmail : userResponse.student_email,
   });
 
   try {
     const apiResponse = await axios.post(baseApiUrl, mangalayatanPayload, {
       headers,
-      timeout: 15000
+      timeout: 15000,
     });
 
-    const statusResult = processMangalayatanApiResponse(apiResponse, collegeName);
+    const statusResult = processMangalayatanApiResponse(
+      apiResponse,
+      collegeName,
+    );
 
     if (studentId) {
       await updateStudentShortlistStatus(
@@ -1659,7 +2044,7 @@ async function handleMangalayatanOnline(collegeName, userResponse, studentId, se
         sendType,
         studentEmail || userResponse.student_email,
         studentPhone || userResponse.student_phone,
-        isPrimary
+        isPrimary,
       );
     }
 
@@ -1670,11 +2055,10 @@ async function handleMangalayatanOnline(collegeName, userResponse, studentId, se
   }
 }
 
-
 export const sentStatustoCollege = async (req, res) => {
-  console.log('\n' + '='.repeat(60));
+  console.log("\n" + "=".repeat(60));
   console.log(`🚀 START: Sending status to college`);
-  console.log('='.repeat(60));
+  console.log("=".repeat(60));
 
   try {
     const {
@@ -1684,7 +2068,7 @@ export const sentStatustoCollege = async (req, res) => {
       studentData,
       studentEmail,
       studentPhone,
-      isPrimary = true
+      isPrimary = true,
     } = req.body;
 
     console.log(`📋 Request Parameters:`, {
@@ -1694,14 +2078,14 @@ export const sentStatustoCollege = async (req, res) => {
       hasStudentData: !!studentData,
       studentEmail,
       studentPhone,
-      isPrimary
+      isPrimary,
     });
 
     if (!collegeName) {
       console.error(`❌ Missing collegeName`);
       return res.status(400).json({
         success: false,
-        message: 'collegeName is required'
+        message: "collegeName is required",
       });
     }
 
@@ -1710,30 +2094,43 @@ export const sentStatustoCollege = async (req, res) => {
       studentData,
       studentEmail,
       studentPhone,
-      isPrimary
+      isPrimary,
     );
 
     console.log(`✅ Student data retrieved:`, {
       email: userResponse.student_email,
       phone: userResponse.student_phone,
-      name: userResponse.student_name
+      name: userResponse.student_name,
     });
 
-    const isSpecialUniversity = collegeName &&
+    const isSpecialUniversity =
+      collegeName &&
       (collegeName.includes("Chandigarh University") ||
         (collegeName.includes("Amity University") &&
           !collegeName.includes("Online")));
 
-    const isLPUOnline = collegeName?.includes("Lovely Professional University Online");
-    const isManipalOnline = collegeName?.includes("Sikkim Manipal University Online") ||
+    const isLPUOnline = collegeName?.includes(
+      "Lovely Professional University Online",
+    );
+    const isManipalOnline =
+      collegeName?.includes("Sikkim Manipal University Online") ||
       collegeName?.includes("Manipal University Online");
-    const isVivekanandGlobal = collegeName?.includes("Vivekanand Global University Online");
+    const isVivekanandGlobal = collegeName?.includes(
+      "Vivekanand Global University Online",
+    );
     const isGLAOnline = collegeName?.includes("GLA University Online");
-    const isGalgotiasOnline = collegeName?.includes("Galgotias University Online");
+    const isGalgotiasOnline = collegeName?.includes(
+      "Galgotias University Online",
+    );
     const isAmityOnline = collegeName?.includes("Amity University Online");
-    const isShooliniOnline = collegeName?.includes("Shoolini University online");
-    const isMangalayatanOnline = collegeName?.includes('Mangalayatan University online');
-
+    const isShooliniOnline = collegeName?.includes(
+      "Shoolini University online",
+    );
+    const isMangalayatanOnline = collegeName?.includes(
+      "Mangalayatan University online",
+    );
+    // Add this near other university detections
+    const isJaypeeNoPaperForms = collegeName?.includes("Jaypee Institute");
     console.log(`🏫 University Detection:`, {
       isSpecialUniversity,
       isLPUOnline,
@@ -1743,7 +2140,7 @@ export const sentStatustoCollege = async (req, res) => {
       isGalgotiasOnline,
       isAmityOnline,
       isShooliniOnline,
-      isMangalayatanOnline
+      isMangalayatanOnline,
     });
 
     let statusResult;
@@ -1751,62 +2148,124 @@ export const sentStatustoCollege = async (req, res) => {
     if (isSpecialUniversity) {
       console.log(`🔄 Routing to Special University handler`);
       statusResult = await handleSpecialUniversity(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
+      );
+    } else if (isJaypeeNoPaperForms) {
+      console.log(`🔄 Routing to Jaypee NoPaperForms handler`);
+      statusResult = await handleJaypeeNoPaperForms(
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else if (isShooliniOnline) {
       console.log(`🔄 Routing to Shoolini Online handler`);
       statusResult = await handleShooliniOnline(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else if (isManipalOnline) {
       console.log(`🔄 Routing to Manipal Online handler`);
       statusResult = await handleManipalOnline(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else if (isVivekanandGlobal) {
       console.log(`🔄 Routing to Vivekanand Global handler`);
       statusResult = await handleVivekanandGlobal(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else if (isLPUOnline) {
       console.log(`🔄 Routing to LPU Online handler`);
       statusResult = await handleLPUOnline(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else if (isGLAOnline) {
       console.log(`🔄 Routing to GLA Online handler`);
       statusResult = await handleGLAOnline(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else if (isGalgotiasOnline) {
       console.log(`🔄 Routing to Galgotias Online handler`);
       statusResult = await handleGalgotiasOnline(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else if (isAmityOnline) {
       console.log(`🔄 Routing to Amity Online handler`);
       statusResult = await handleAmityOnline(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else if (isMangalayatanOnline) {
       console.log(`🔄 Routing to Mangalayatan Online handler`);
       statusResult = await handleMangalayatanOnline(
-        collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     } else {
       console.log(`🔄 Routing to Standard University handler`);
       statusResult = await processStandardUniversity(
-        req, collegeName, userResponse, studentId, sendType,
-        studentEmail, studentPhone, isPrimary
+        req,
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
       );
     }
 
@@ -1815,14 +2274,13 @@ export const sentStatustoCollege = async (req, res) => {
     return res.status(200).json({
       success: statusResult === "Proceed",
       message: statusResult,
-      status: statusResult
+      status: statusResult,
     });
-
   } catch (error) {
-    console.error('\n' + '❌'.repeat(20));
+    console.error("\n" + "❌".repeat(20));
     console.error(`💥 ERROR in sentStatustoCollege:`, error.message);
     console.error(`Stack:`, error.stack);
-    console.error('❌'.repeat(20) + '\n');
+    console.error("❌".repeat(20) + "\n");
 
     if (!error.response) {
       return handleApiError(
@@ -1835,18 +2293,18 @@ export const sentStatustoCollege = async (req, res) => {
         req.body.sendType || "manual",
         req.body.studentEmail,
         req.body.studentPhone,
-        req.body.isPrimary ?? true
+        req.body.isPrimary ?? true,
       );
     }
 
     return res.status(500).json({
       success: false,
-      message: 'Internal server error',
-      error: error.message
+      message: "Internal server error",
+      error: error.message,
     });
   } finally {
-    console.log('='.repeat(60));
+    console.log("=".repeat(60));
     console.log(`🏁 END: Sending status to college`);
-    console.log('='.repeat(60) + '\n');
+    console.log("=".repeat(60) + "\n");
   }
 };

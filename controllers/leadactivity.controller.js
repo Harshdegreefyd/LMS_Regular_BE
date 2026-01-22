@@ -1,93 +1,93 @@
-import { Student, StudentLeadActivity } from '../models/index.js';
+import { Student, StudentLeadActivity } from "../models/index.js";
 export const normalizeLeadAnswers = (input) => {
   if (!Array.isArray(input)) return [];
 
   if (
     input.length &&
-    typeof input[0] === 'object' &&
-    'question' in input[0] &&
-    'answer' in input[0]
+    typeof input[0] === "object" &&
+    "question" in input[0] &&
+    "answer" in input[0]
   ) {
     return input.filter(
-      (i) => i.answer !== null && i.answer !== undefined && i.answer !== ''
+      (i) => i.answer !== null && i.answer !== undefined && i.answer !== "",
     );
   }
 
-  if (input.length && typeof input[0] === 'object') {
+  if (input.length && typeof input[0] === "object") {
     const obj = input[0];
 
     return Object.entries(obj)
-      .filter(([_, value]) => value !== null && value !== undefined && value !== '')
+      .filter(
+        ([_, value]) => value !== null && value !== undefined && value !== "",
+      )
       .map(([question, answer]) => ({
         question,
-        answer: Array.isArray(answer) ? answer.join(', ') : String(answer)
+        answer: Array.isArray(answer) ? answer.join(", ") : String(answer),
       }));
   }
 
   return [];
 };
 
-
 export const createLeadActivity = async (leadData, studentId) => {
   try {
-    const sourceurl = leadData.first_source_url || 
-                      leadData.sourceUrl ||
-                      leadData.source_url ||
-                      '';
-    
-    const source = leadData.source || '';
+    const sourceurl =
+      leadData.first_source_url ||
+      leadData.sourceUrl ||
+      leadData.source_url ||
+      "";
+
+    const source = leadData.source || "";
 
     const newLeadActivity = await StudentLeadActivity.create({
-      student_id: studentId || '',
-      
-      student_name: leadData.name || '',
-      student_email: leadData.email || '',
-      student_phone: leadData.phoneNumber || leadData.mobile || '',
-      parents_number: leadData.parentsNumber || leadData.parents_number || '',
-      whatsapp: leadData.whatsapp || '',
-      cta_name: leadData.ctaName || leadData.cta_name || '',
-      form_name: leadData.formName || leadData.form_name || '',
-      
+      student_id: studentId || "",
+
+      student_name: leadData.name || "",
+      student_email: leadData.email || "",
+      student_phone: leadData.phoneNumber || leadData.mobile || "",
+      parents_number: leadData.parentsNumber || leadData.parents_number || "",
+      whatsapp: leadData.whatsapp || "",
+      cta_name: leadData.ctaName || leadData.cta_name || "",
+      form_name: leadData.formName || leadData.form_name || "",
+      is_transfer: leadData.isTransfer || false,
       source: source,
       source_url: sourceurl,
-      
-      utm_source: leadData.utmSource || '',
-      utm_medium: leadData.utmMedium || '',
-      utm_keyword: leadData.utmKeyword || '',
-      utm_campaign: leadData.utmCampaign || '',
-      utm_campaign_id: leadData.utmCampaignId || '',
-      utm_adgroup_id: leadData.utmAdgroupId || '',
-      utm_creative_id: leadData.utmCreativeId || '',
-      
-      ip_city: leadData.ipCity || '',
-      browser: leadData.browser || '',
-      device: leadData.device || '',
-      
-      student_comment: normalizeLeadAnswers(
-        leadData.studentComment ||
-        leadData.student_comment ||
-        leadData.answers ||
-        []
-      ),
-      
-      highest_qualification: leadData.highestQualification || '',
+
+      utm_source: leadData.utmSource || "",
+      utm_medium: leadData.utmMedium || "",
+      utm_keyword: leadData.utmKeyword || "",
+      utm_campaign: leadData.utmCampaign || "",
+      utm_campaign_id: leadData.utmCampaignId || "",
+      utm_adgroup_id: leadData.utmAdgroupId || "",
+      utm_creative_id: leadData.utmCreativeId || "",
+
+      ip_city: leadData.ipCity || "",
+      browser: leadData.browser || "",
+      device: leadData.device || "",
+
+      student_comment:
+        source == "Google_Lead_form"
+          ? leadData.student_comment
+          : normalizeLeadAnswers(leadData.student_comment || []),
+
+      highest_qualification: leadData.highestQualification || "",
       working_professional: leadData.workingProfessional ?? false,
-      student_status: 'new',
-      
-      destination_number: leadData.DestinationNumber || '',
-      dial_whom_number: leadData.DialWhomNumber || '',
-      call_duration: leadData.CallDuration || '',
-      ivr_status: leadData.Status || leadData.ivr_status || '',
-      start_time: leadData.StartTime || '',
-      end_time: leadData.EndTime || '',
-      call_sid: leadData.CallSid || '',
-      call_recording_url: leadData.CallRecordingUrl || '',
-      talk_duration: leadData.TalkDuration || '',
+      student_status: "new",
+
+      destination_number: leadData.DestinationNumber || "",
+      dial_whom_number: leadData.DialWhomNumber || "",
+      call_duration: leadData.CallDuration || "",
+      ivr_status: leadData.Status || leadData.ivr_status || "",
+      start_time: leadData.StartTime || "",
+      end_time: leadData.EndTime || "",
+      call_sid: leadData.CallSid || "",
+      call_recording_url: leadData.CallRecordingUrl || "",
+      talk_duration: leadData.TalkDuration || "",
     });
 
     return { success: true, leadActivity: newLeadActivity };
   } catch (error) {
-    console.error('Error creating lead activity:', error);
+    console.error("Error creating lead activity:", error);
     return { success: false, error: error.message };
   }
 };
@@ -98,19 +98,19 @@ export const getLeadActivitiesByStudent = async (req, res) => {
 
     const leadActivities = await StudentLeadActivity.findAll({
       where: { student_id: studentId },
-      order: [['created_at', 'DESC']]
+      order: [["created_at", "DESC"]],
     });
 
     res.status(200).json({
       success: true,
-      leadActivities
+      leadActivities,
     });
   } catch (error) {
-    console.error('Error fetching lead activities:', error);
+    console.error("Error fetching lead activities:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching lead activities',
-      error: error.message
+      message: "Error fetching lead activities",
+      error: error.message,
     });
   }
 };
@@ -125,7 +125,7 @@ export const updateLeadActivityStatus = async (req, res) => {
     if (!leadActivity) {
       return res.status(404).json({
         success: false,
-        message: 'Lead activity not found'
+        message: "Lead activity not found",
       });
     }
 
@@ -137,7 +137,7 @@ export const updateLeadActivityStatus = async (req, res) => {
       const existingComments = leadActivity.student_comment || {};
       leadActivity.student_comment = {
         ...existingComments,
-        ...studentComment
+        ...studentComment,
       };
     }
 
@@ -145,14 +145,14 @@ export const updateLeadActivityStatus = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      leadActivity
+      leadActivity,
     });
   } catch (error) {
-    console.error('Error updating lead activity:', error);
+    console.error("Error updating lead activity:", error);
     res.status(500).json({
       success: false,
-      message: 'Error updating lead activity',
-      error: error.message
+      message: "Error updating lead activity",
+      error: error.message,
     });
   }
 };
@@ -163,18 +163,18 @@ export const getActivityByStudentId = async (req, res) => {
 
     const leadActivities = await StudentLeadActivity.findAll({
       where: { student_id: studentId },
-      order: [['created_at', 'DESC']]
+      order: [["created_at", "DESC"]],
     });
     res.status(200).json({
       success: true,
-      data: leadActivities
+      data: leadActivities,
     });
   } catch (error) {
-    console.error('Error getting lead activity:', error);
+    console.error("Error getting lead activity:", error);
     res.status(500).json({
       success: false,
-      message: 'Error getting lead activity',
-      error: error.message
+      message: "Error getting lead activity",
+      error: error.message,
     });
   }
 };
@@ -195,7 +195,7 @@ export const getAllLeadActivities = async (req, res) => {
       where: whereClause,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['created_at', 'DESC']]
+      order: [["created_at", "DESC"]],
     });
 
     res.status(200).json({
@@ -206,15 +206,15 @@ export const getAllLeadActivities = async (req, res) => {
         totalPages: Math.ceil(count / limit),
         currentPage: parseInt(page),
         hasNextPage: offset + rows.length < count,
-        hasPrevPage: page > 1
-      }
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
-    console.error('Error getting all lead activities:', error);
+    console.error("Error getting all lead activities:", error);
     res.status(500).json({
       success: false,
-      message: 'Error getting all lead activities',
-      error: error.message
+      message: "Error getting all lead activities",
+      error: error.message,
     });
   }
 };
@@ -227,29 +227,34 @@ export const getLeadActivityById = async (req, res) => {
       include: [
         {
           model: Student,
-          as: 'student',
-          attributes: ['student_id', 'student_name', 'student_email', 'student_phone']
-        }
-      ]
+          as: "student",
+          attributes: [
+            "student_id",
+            "student_name",
+            "student_email",
+            "student_phone",
+          ],
+        },
+      ],
     });
 
     if (!leadActivity) {
       return res.status(404).json({
         success: false,
-        message: 'Lead activity not found'
+        message: "Lead activity not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: leadActivity
+      data: leadActivity,
     });
   } catch (error) {
-    console.error('Error getting lead activity by ID:', error);
+    console.error("Error getting lead activity by ID:", error);
     res.status(500).json({
       success: false,
-      message: 'Error getting lead activity',
-      error: error.message
+      message: "Error getting lead activity",
+      error: error.message,
     });
   }
 };
@@ -259,26 +264,26 @@ export const deleteLeadActivity = async (req, res) => {
     const { leadActivityId } = req.params;
 
     const deleted = await StudentLeadActivity.destroy({
-      where: { id: leadActivityId }
+      where: { id: leadActivityId },
     });
 
     if (!deleted) {
       return res.status(404).json({
         success: false,
-        message: 'Lead activity not found'
+        message: "Lead activity not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Lead activity deleted successfully'
+      message: "Lead activity deleted successfully",
     });
   } catch (error) {
-    console.error('Error deleting lead activity:', error);
+    console.error("Error deleting lead activity:", error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting lead activity',
-      error: error.message
+      message: "Error deleting lead activity",
+      error: error.message,
     });
   }
 };
@@ -291,7 +296,7 @@ export const getLeadActivitiesByDateRange = async (req, res) => {
 
     if (startDate && endDate) {
       whereClause.created_at = {
-        [Op.between]: [new Date(startDate), new Date(endDate)]
+        [Op.between]: [new Date(startDate), new Date(endDate)],
       };
     }
 
@@ -301,63 +306,53 @@ export const getLeadActivitiesByDateRange = async (req, res) => {
 
     const leadActivities = await StudentLeadActivity.findAll({
       where: whereClause,
-      order: [['created_at', 'DESC']]
+      order: [["created_at", "DESC"]],
     });
 
     res.status(200).json({
       success: true,
-      data: leadActivities
+      data: leadActivities,
     });
   } catch (error) {
-    console.error('Error getting lead activities by date range:', error);
+    console.error("Error getting lead activities by date range:", error);
     res.status(500).json({
       success: false,
-      message: 'Error getting lead activities by date range',
-      error: error.message
+      message: "Error getting lead activities by date range",
+      error: error.message,
     });
   }
 };
 
-
-
-
-
-
 export const bulkInsertStudentLeadActivities = async (req, res) => {
   try {
-    const  activities  = req.body;
+    const activities = req.body;
 
     if (!Array.isArray(activities) || activities.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'activities must be a non-empty array'
+        message: "activities must be a non-empty array",
       });
     }
 
     // 1️⃣ Get all valid student_ids
     const students = await Student.findAll({
-      attributes: ['student_id'],
-      raw: true
+      attributes: ["student_id"],
+      raw: true,
     });
 
-    const validStudentIds = new Set(
-      students.map(s => s.student_id)
-    );
+    const validStudentIds = new Set(students.map((s) => s.student_id));
 
     // 2️⃣ Split valid & invalid records
     const validActivities = [];
     const skippedActivities = [];
 
     for (const activity of activities) {
-      if (
-        activity.student_id &&
-        validStudentIds.has(activity.student_id)
-      ) {
+      if (activity.student_id && validStudentIds.has(activity.student_id)) {
         validActivities.push(activity);
       } else {
         skippedActivities.push({
           student_id: activity.student_id || null,
-          reason: 'student_id not found in students table'
+          reason: "student_id not found in students table",
         });
       }
     }
@@ -365,27 +360,25 @@ export const bulkInsertStudentLeadActivities = async (req, res) => {
     // 3️⃣ Insert only valid records
     let insertedCount = 0;
     if (validActivities.length > 0) {
-      const inserted = await StudentLeadActivity.bulkCreate(
-        validActivities,
-        { validate: true }
-      );
+      const inserted = await StudentLeadActivity.bulkCreate(validActivities, {
+        validate: true,
+      });
       insertedCount = inserted.length;
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Bulk insert completed',
+      message: "Bulk insert completed",
       inserted: insertedCount,
       skipped: skippedActivities.length,
-      skippedRecords: skippedActivities
+      skippedRecords: skippedActivities,
     });
-
   } catch (error) {
-    console.error('Bulk Lead Activity Error:', error);
+    console.error("Bulk Lead Activity Error:", error);
     return res.status(500).json({
       success: false,
-      message: 'Internal server error',
-      error: error.message
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
