@@ -285,11 +285,7 @@ class WebsiteChatService {
   static notifySupervisors(event, data) {
     if (global.io) {
       global.io.of('/website-chat').to('supervisors').emit(event, data);
-      
-      // Also broadcast to the main 'all_supervisors' room in the default namespace
-      // This ensures supervisors connected to the main dashboard receive the alert
-      // Filter out 'chat_updated' (New Message) to prevent spam, only notify on creation/close
-      if (global.io && event !== 'chat_updated') {
+          if (global.io && event !== 'chat_updated') {
           global.io.to('all_supervisors').emit('global_chat_notification', {
               event,
               data: {
@@ -307,8 +303,10 @@ class WebsiteChatService {
     static notifyCounsellors(event, id, data) {
     if (global.io) {
       global.io.of('/website-chat').to(id).emit(event, data);
-      global.io.of('/website-chat').to('supervisors').emit(event, data);
+      if(event=='chat_closed')
+      {
 
+      
       global.io.to('all_supervisors').emit('global_chat_notification', {
         event,
         data: {
@@ -318,6 +316,7 @@ class WebsiteChatService {
             message: `New chat assigned with ${data.studentName || 'Student'}`
         }
       });
+    }
     }
   }
   static notifyGlobalListeners(data) {
@@ -330,7 +329,6 @@ class WebsiteChatService {
                   forRole: 'supervisor'
               });
 
-              // Notify Assigned Counsellor
               if (data.counsellorId) {
                  ns.to(data.counsellorId).emit('global_message_notification', {
                      ...data,
