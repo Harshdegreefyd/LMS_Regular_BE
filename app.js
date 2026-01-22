@@ -16,8 +16,8 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
-  "http://www.degreefyd.com",
-  "http://degreefyd.com",
+  "https://www.degreefyd.com",
+  "https://degreefyd.com",
   "http://localhost:5174",
   "http://localhost:5175",
   "https://regularlms.degreefyd.com",
