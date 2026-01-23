@@ -191,6 +191,7 @@ class WebsiteChatService {
       } else {
           updateData.unreadCountStudent = (chat.unreadCountStudent || 0) + 1;
       }
+      console.log('Updating chat with data:', updateData);
 
       await chat.update(updateData);
 
