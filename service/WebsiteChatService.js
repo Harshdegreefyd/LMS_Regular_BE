@@ -128,13 +128,28 @@ class WebsiteChatService {
       if (readerType !== 'Student') {
             const countToDecr = (chat && chat.unreadCountCounsellor) ? parseInt(chat.unreadCountCounsellor) : 0;
             
-            if (countToDecr > 0) {
-                 if (chat && chat.counsellorId) {
-                      const statsKey = `user:${chat.counsellorId}:stats`;
-                      await redis.hincrby(statsKey, 'unread_count', -countToDecr);
-                 }
-                 await redis.hincrby('stats:global', 'unread_count', -countToDecr);
-            }
+            const script = `
+local current = tonumber(redis.call('HGET', KEYS[1], ARGV[1]) or "0")
+local decr = tonumber(ARGV[2])
+
+local newValue = current - decr
+if newValue < 0 then
+  newValue = 0
+end
+
+redis.call('HSET', KEYS[1], ARGV[1], newValue)
+return newValue
+`;
+
+if (countToDecr > 0) {
+  if (chat?.counsellorId) {
+    const statsKey = `user:${chat.counsellorId}:stats`;
+    await redis.eval(script, 1, statsKey, 'unread_count', countToDecr);
+  }
+
+  await redis.eval(script, 1, 'stats:global', 'unread_count', countToDecr);
+}
+
       }
       
       await WebsiteChat.update(updateData, { where: { id: chatId } });
