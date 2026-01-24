@@ -211,7 +211,7 @@ export const updateStudentStatus = async (req, res) => {
     const newRemark = await createRemark(remarkData);
     if (
       (leadStatus === "NotInterested" || leadStatus === "Not Interested") &&
-      leadSubStatus === "Only_Regular course"
+      leadSubStatus === "Only_Online course"
     ) {
       const studentDetails = await Student.findByPk(studentId);
       const studentleadActivityDetails = await StudentLeadActivity.findOne({
