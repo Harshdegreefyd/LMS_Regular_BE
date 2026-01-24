@@ -81,6 +81,8 @@ class WebsiteChatService {
         .zadd(timelines.counsellor, timestamp, chat.id)
         .exec();
 
+      await redis.expire(`chat:${chat.id}:last_message`, REDIS_TTL);
+
       await this.publishToStream('CHAT_CREATED', { chatId: chat.id });
       
       this.notifySupervisors('chat_created', fullChat.get({ plain: true }));
@@ -102,6 +104,8 @@ class WebsiteChatService {
     try {
       const senderTypeToUpdate = readerType === 'Student' ? ['Operator', 'System'] : ['Student'];
 
+      const chat = await WebsiteChat.findByPk(chatId, { attributes: ['counsellorId', 'unreadCountCounsellor', 'unreadCountStudent'] });
+
       await WebsiteChatMessage.update({ 
         isRead: true,
         readAt: new Date()
@@ -120,6 +124,18 @@ class WebsiteChatService {
       const updateData = readerType === 'Student' 
         ? { unreadCountStudent: 0 } 
         : { unreadCountCounsellor: 0 };
+        
+      if (readerType !== 'Student') {
+            const countToDecr = (chat && chat.unreadCountCounsellor) ? parseInt(chat.unreadCountCounsellor) : 0;
+            
+            if (countToDecr > 0) {
+                 if (chat && chat.counsellorId) {
+                      const statsKey = `user:${chat.counsellorId}:stats`;
+                      await redis.hincrby(statsKey, 'unread_count', -countToDecr);
+                 }
+                 await redis.hincrby('stats:global', 'unread_count', -countToDecr);
+            }
+      }
       
       await WebsiteChat.update(updateData, { where: { id: chatId } });
 
@@ -150,7 +166,7 @@ class WebsiteChatService {
       let displayName = '';
       let userID=senderUserId;
       if (senderType === 'Student') {
-          displayName = chat.studentName;
+           displayName = chat.studentName;
             userID=chat.studentId;
       } else {
            displayName = senderName;
@@ -164,6 +180,20 @@ class WebsiteChatService {
         content,
         isRead: false
       });
+
+      const updateData = {
+          lastMessageAt: new Date(),
+          lastMessage: content
+      };
+
+      if (senderType === 'Student') {
+          updateData.unreadCountCounsellor = (chat.unreadCountCounsellor || 0) + 1;
+      } else {
+          updateData.unreadCountStudent = (chat.unreadCountStudent || 0) + 1;
+      }
+      console.log('Updating chat with data:', updateData);
+
+      await chat.update(updateData);
 
       const keys = this.getKeys(chatId);
       const timelines = this.getTimelineKeys(chat.counsellorId);
@@ -179,8 +209,17 @@ class WebsiteChatService {
         createdAt: new Date().toISOString(),
         senderName: displayName
       });
-      pipeline.expire(keys.lastMsg, REDIS_TTL);
-      pipeline.expire(keys.unread, REDIS_TTL); 
+      // FIX 2: Stop TTL reset spam
+      // pipeline.expire(keys.lastMsg, REDIS_TTL);
+      // pipeline.expire(keys.unread, REDIS_TTL); 
+      
+      if (senderType === 'Student' && chat.counsellorId) {
+          const statsKey = `user:${chat.counsellorId}:stats`;
+          pipeline.hincrby(statsKey, 'unread_count', 1);
+      } 
+      if (senderType === 'Student') {
+          pipeline.hincrby('stats:global', 'unread_count', 1);
+      } 
 
       pipeline.zadd(timelines.global, timestamp, chatId);
       if (chat.counsellorId) {
@@ -287,49 +326,53 @@ class WebsiteChatService {
             whereClause = { counsellorId: operatorId };
         }
         
+        let subQueryWhere = '';
+        if (!isSupervisor) {
+             subQueryWhere = `WHERE counsellor_id = '${operatorId}'`;
+        }
+
         const dbChats = await WebsiteChat.findAll({
-            where: whereClause,
+            where: {
+                ...whereClause,
+                id: {
+                    [Op.in]: sequelize.literal(`(
+                        SELECT id FROM (
+                            SELECT id, ROW_NUMBER() OVER (PARTITION BY student_id ORDER BY last_message_at DESC) as rn 
+                            FROM website_chats 
+                            ${subQueryWhere}
+                        ) t WHERE rn = 1
+                    )`)
+                }
+            },
             include: [{ model: Counsellor, required: false }],
-                      order: [['lastMessageAt', 'DESC']],
-             limit: 100
+            order: [['lastMessageAt', 'DESC']],
+            limit: 100
         });
 
         if (dbChats.length === 0) return [];
-
-        const pipeline = redis.pipeline();
-        dbChats.forEach(chat => {
-            const keys = this.getKeys(chat.id);
-            pipeline.hgetall(keys.unread);
-            pipeline.hgetall(keys.lastMsg);
-        });
-
-        const results = await pipeline.exec();
-
-        const enrichedChats = dbChats.map((chat, index) => {
+        console.log(`Fetched ${dbChats.length} chats from DB for operatorId: ${operatorId}, role: ${role}`);
+        const enrichedChats = dbChats.map((chat) => {
             const chatJSON = chat.toJSON();
-            const unreadRes = results[index * 2];
-            const msgRes = results[index * 2 + 1];
-
-            const unreadData = (unreadRes && unreadRes[0] === null) ? unreadRes[1] : {};
-            const msgData = (msgRes && msgRes[0] === null) ? msgRes[1] : {};
-
-            const redisUnreadStudent = parseInt(unreadData.student || 0);
-            const redisUnreadCounsellor = parseInt(unreadData.counsellor || 0);
-
-            const lastMessageAt = msgData.createdAt ? new Date(msgData.createdAt) : chatJSON.lastMessageAt;
-            const lastMessage = msgData.content || chatJSON.lastMessage;
-            const senderName = msgData.senderName || chatJSON.senderName; // Ensure senderName is updated
+            
+             const redisUnreadStudent = chat.unreadCountStudent || 0;
+            const redisUnreadCounsellor = chat.unreadCountCounsellor || 0;
+            
+            const lastMessageAt = chatJSON.lastMessageAt;
+            const lastMessage = chatJSON.lastMessage;
+            const senderName = chatJSON.senderName; 
 
             return {
                 ...chatJSON,
                 unreadCountStudent: redisUnreadStudent,
                 unreadCountCounsellor: redisUnreadCounsellor,
                 lastMessageAt: lastMessageAt,
-                lastMessageAtDate: new Date(lastMessageAt), 
+                lastMessageAtDate: new Date(lastMessageAt),
                 lastMessage: lastMessage,
                 senderName: senderName
             };
         });
+
+
 
         const studentMap = new Map();
         enrichedChats.forEach(chat => {
@@ -471,38 +514,26 @@ class WebsiteChatService {
   static async getUnreadCount(operatorId, role) {
       try {
           const normalizedRole = role ? role.toLowerCase() : '';
-          
           let timelineKey = null;
           let targetField = 'counsellor'; 
 
           if (normalizedRole === 'counsellor' || normalizedRole === 'agent') {
-              timelineKey = `regular:timeline:counsellor:${operatorId}`;
+              const statsKey = `user:${operatorId}:stats`;
+              const cachedCount = await redis.hget(statsKey, 'unread_count');
+              return parseInt(cachedCount) || 0;
+
           } else if (['supervisor', 'admin', 'analyser', 'superadmin'].includes(normalizedRole)) {
-              timelineKey = 'regular:timeline:global';
+              const statsKey = 'stats:global';
+              const cachedCount = await redis.hget(statsKey, 'unread_count');
+              if (cachedCount === null) {
+                  await redis.hset(statsKey, 'unread_count', 0);
+                  return 0;
+              }
+              return parseInt(cachedCount) || 0;
           } else {
               return 0;
           }
 
-          const chatIds = await redis.zrange(timelineKey, 0, -1);
-
-          if (!chatIds || chatIds.length === 0) {
-              return 0;
-          }
-
-          const pipeline = redis.pipeline();
-          chatIds.forEach(id => {
-              pipeline.hget(`chat:${id}:unread`, targetField);
-          });
-
-          const results = await pipeline.exec();
-          
-          let totalUnread = 0;
-          results.forEach(res => {
-              const val = res && res[1] ? parseInt(res[1]) : 0;
-              if (!isNaN(val)) totalUnread += val;
-          });
-
-          return totalUnread;
       } catch (error) {
           console.error('Error getting exact unread count from Redis:', error);
           return 0;

@@ -92,7 +92,11 @@ class CallbackNotificationService {
       });
       
       if (todaysCallbacks.length === 0) {
-        await redis.setex(`callbacks:${today}`, 15 * 3600, JSON.stringify({}));
+        // Optimization: Use Hash even for empty (though empty hash is tricky, better to just set a flag or handle empty hgetall)
+        // Actually, if empty, we might not need to set anything or set a 'meta' field.
+        // For parity, let's just expire the key if it exists or do nothing.
+        // Or set a placeholder.
+        await redis.del(`callbacks:${today}`); 
         return { success: true, callbacks: 0 };
       }
 
@@ -150,7 +154,15 @@ class CallbackNotificationService {
       });
 
       const redisKey = `callbacks:${today}`;
-      await redis.setex(redisKey, 15 * 3600, JSON.stringify(schedule));
+      const pipeline = redis.pipeline();
+      pipeline.del(redisKey); // Clear potential old data
+      
+      Object.entries(schedule).forEach(([time, slotData]) => {
+          pipeline.hset(redisKey, time, JSON.stringify(slotData));
+      });
+      
+      pipeline.expire(redisKey, 15 * 3600);
+      await pipeline.exec();
 
       return { 
         success: true, 
@@ -169,14 +181,13 @@ class CallbackNotificationService {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      const scheduleStr = await redis.get(`callbacks:${today}`);
+      const scheduleSlotStr = await redis.hget(`callbacks:${today}`, targetTime);
 
-      if (!scheduleStr) {
+      if (!scheduleSlotStr) {
         return;
       }
 
-      const schedule = JSON.parse(scheduleStr);
-      const notifications = schedule[targetTime] || {};
+      const notifications = JSON.parse(scheduleSlotStr) || {};
 
       if (Object.keys(notifications).length === 0) {
         return;
@@ -312,13 +323,18 @@ class CallbackNotificationService {
 
   async getTodaySchedule() {
     const today = new Date().toISOString().split('T')[0];
-    const scheduleStr = await redis.get(`callbacks:${today}`);
+    const scheduleHash = await redis.hgetall(`callbacks:${today}`);
 
-    if (!scheduleStr) {
+    if (!scheduleHash || Object.keys(scheduleHash).length === 0) {
       return { today, schedule: {}, message: 'No schedule calculated yet' };
     }
 
-    const schedule = JSON.parse(scheduleStr);
+    const schedule = {};
+    Object.entries(scheduleHash).forEach(([time, dataStr]) => {
+        try {
+            schedule[time] = JSON.parse(dataStr);
+        } catch (e) { console.error('JSON Parse error for slot', time); }
+    });
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     

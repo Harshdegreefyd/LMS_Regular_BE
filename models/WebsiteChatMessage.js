@@ -13,7 +13,7 @@ const WebsiteChatMessage = sequelize.define('WebsiteChatMessage', {
     allowNull: false,
     field: 'chat_id',
     references: {
-      model: 'website_chats', // referencing persistent table name
+      model: 'website_chats',
       key: 'id'
     },
     onDelete: 'CASCADE'

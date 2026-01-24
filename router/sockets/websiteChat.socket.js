@@ -100,7 +100,18 @@ export default (io) => {
           targetRole
         );
 
-        socket.emit('chat_list_update', chats);
+        const enrichedChats = chats.map(chat => {
+          const roomUsers = chatRoomUsers.get(chat.id);
+          const isStudentOnline = roomUsers ? roomUsers.has(`student-${chat.id}`) : false;
+          return { ...chat, isOnline: isStudentOnline };
+        });
+
+        if (enrichedChats && enrichedChats.length > 0) {
+          const chatIds = enrichedChats.map(chat => chat.id);
+          socket.join(chatIds);
+        }
+
+        socket.emit('chat_list_update', enrichedChats);
       } catch (error) {
         console.error('Dashboard Fetch Error:', error);
       }
@@ -158,6 +169,7 @@ export default (io) => {
 
     socket.on('mark_read', async ({ chatId, userType }) => {
       try {
+        console.log(`Received mark_read for chatId: ${chatId}, userType: ${userType}`);
         await WebsiteChatService.markMessagesAsRead(chatId, userType);
       } catch (error) {
         console.error('Mark Read Error:', error);
