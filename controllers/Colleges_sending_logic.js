@@ -4,17 +4,30 @@ import { createCollegeApiSentStatus } from "./collegeApiSentStatus.controller.js
 import CourseHeaderValue from "../models/university_header_values.js";
 import { Op, fn, col, where } from "sequelize";
 
-async function findHeaderValue(collegeName) {
-  console.log(`🔍 Finding header values for: ${collegeName}`);
+async function findHeaderValue(collegeName, courseId) {
 
   try {
+    const whereCondition = {
+      [Op.and]: [
+        where(fn("LOWER", col("university_name")), {
+          [Op.eq]: collegeName.toLowerCase(),
+        }),
+      ],
+    };
+
+    if (courseId !== null && courseId !== undefined) {
+      whereCondition[Op.and].push({
+        course_id: courseId,
+      });
+    }
+
     const courseHeaderValue = await CourseHeaderValue.findOne({
-      where: where(fn("LOWER", col("university_name")), {
-        [Op.eq]: collegeName.toLowerCase(),
-      }),
+      where: whereCondition,
       order: [["created_at", "ASC"]],
     });
+
     console.log("hello,", courseHeaderValue);
+
     if (!courseHeaderValue || !courseHeaderValue.values) {
       console.error(`❌ Course header values not found for: ${collegeName}`);
       throw new Error("Course header values not found");
@@ -25,11 +38,12 @@ async function findHeaderValue(collegeName) {
   } catch (error) {
     console.error(
       `❌ Error fetching course header values for ${collegeName}:`,
-      error,
+      error
     );
     throw error;
   }
 }
+
 
 async function updateStudentShortlistStatus(
   studentId,
@@ -726,7 +740,7 @@ async function processStandardUniversity(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🔄 Processing standard university: ${collegeName}`, {
     isPrimary,
@@ -734,7 +748,7 @@ async function processStandardUniversity(
     studentPhone: studentPhone || "Using primary",
   });
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
   let transformedData = {};
   let apiUrl = null;
   let apiKey = null;
@@ -867,7 +881,7 @@ async function handleShooliniOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling Shoolini University Online`, {
     collegeName,
@@ -876,7 +890,7 @@ async function handleShooliniOnline(
     studentPhone,
   });
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -1049,13 +1063,13 @@ async function handleJaypeeNoPaperForms(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling Jaypee NoPaperForms API: ${collegeName}`, {
     isPrimary,
   });
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -1198,7 +1212,7 @@ async function handleSpecialUniversity(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling special university: ${collegeName}`, {
     isPrimary,
@@ -1237,7 +1251,7 @@ async function handleSpecialUniversity(
     { Attribute: "mx_City", Value: "West Delhi" },
   ];
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
   const apiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1315,7 +1329,7 @@ async function handleManipalOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling Manipal Online: ${collegeName}`, { isPrimary });
   console.log(userResponse);
@@ -1347,7 +1361,7 @@ async function handleManipalOnline(
     { Attribute: "mx_Enquired_University", Value: "MUJ" },
   ];
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
   const apiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1415,7 +1429,7 @@ async function handleVivekanandGlobal(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling Vivekanand Global: ${collegeName}`, { isPrimary });
 
@@ -1449,7 +1463,7 @@ async function handleVivekanandGlobal(
     { Attribute: "Source", Value: "Nuvora" },
   ];
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
   const apiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1516,7 +1530,7 @@ async function handleLPUOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling LPU Online: ${collegeName}`, { isPrimary });
 
@@ -1537,7 +1551,7 @@ async function handleLPUOnline(
     field_new_specialization: "BBA",
   };
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
   const apiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1604,11 +1618,11 @@ async function handleGLAOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling GLA Online: ${collegeName}`, { isPrimary });
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
   const baseApiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1711,11 +1725,11 @@ async function handleGalgotiasOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling Galgotias Online: ${collegeName}`, { isPrimary });
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -1837,7 +1851,7 @@ async function handleAmityOnline(
 ) {
   console.log(`🎯 Handling Amity Online: ${collegeName}`, { isPrimary });
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -1946,11 +1960,11 @@ async function handleMangalayatanOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
+  isPrimary,courseId
 ) {
   console.log(`🎯 Handling Mangalayatan Online: ${collegeName}`, { isPrimary });
 
-  const courseHeaderValue = await findHeaderValue(collegeName);
+  const courseHeaderValue = await findHeaderValue(collegeName,courseId);
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -2069,6 +2083,7 @@ export const sentStatustoCollege = async (req, res) => {
       studentEmail,
       studentPhone,
       isPrimary = true,
+      courseId,
     } = req.body;
 
     console.log(`📋 Request Parameters:`, {
@@ -2154,7 +2169,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else if (isJaypeeNoPaperForms) {
       console.log(`🔄 Routing to Jaypee NoPaperForms handler`);
@@ -2165,7 +2180,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else if (isShooliniOnline) {
       console.log(`🔄 Routing to Shoolini Online handler`);
@@ -2176,7 +2191,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else if (isManipalOnline) {
       console.log(`🔄 Routing to Manipal Online handler`);
@@ -2187,7 +2202,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else if (isVivekanandGlobal) {
       console.log(`🔄 Routing to Vivekanand Global handler`);
@@ -2198,7 +2213,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else if (isLPUOnline) {
       console.log(`🔄 Routing to LPU Online handler`);
@@ -2210,6 +2225,7 @@ export const sentStatustoCollege = async (req, res) => {
         studentEmail,
         studentPhone,
         isPrimary,
+        courseId
       );
     } else if (isGLAOnline) {
       console.log(`🔄 Routing to GLA Online handler`);
@@ -2220,7 +2236,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else if (isGalgotiasOnline) {
       console.log(`🔄 Routing to Galgotias Online handler`);
@@ -2231,7 +2247,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else if (isAmityOnline) {
       console.log(`🔄 Routing to Amity Online handler`);
@@ -2242,7 +2258,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else if (isMangalayatanOnline) {
       console.log(`🔄 Routing to Mangalayatan Online handler`);
@@ -2253,7 +2269,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     } else {
       console.log(`🔄 Routing to Standard University handler`);
@@ -2265,7 +2281,7 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,
+        isPrimary,courseId
       );
     }
 

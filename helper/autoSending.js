@@ -295,12 +295,12 @@ export async function autoSending(students_data = []) {
 
             console.log('StudentCourseStatus update response:', statusResponse.data);
 
-            // Log the sent status
             const logResponse = await axios.post(
               'http://localhost:3031/v1/StudentCourseStatusLogs/sentStatustoCollege',
               {
                 collegeName: college,
                 studentId: studentId,
+                "courseId": courseId,
                 sendType: 'auto'
               }
             );

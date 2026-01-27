@@ -1495,50 +1495,135 @@ export const insertUniversityCourses = async (req, res) => {
     });
   }
 };
+
+
+
+const ALLOWED_COLLEGES = [
+  'chandigarh university, mohali',
+  'chandigarh group of colleges, landran (cgg)',
+  'lovely professional university'
+];
+
+const ENGINEERING_DEGREES = [
+  'b.tech',
+  'btech',
+  'b.e',
+  'be'
+];
+
+const CSE_SPECIALIZATION_MAP = {
+  'chandigarh university, mohali': [
+    'computer science',
+    'computer science engineering',
+    'cse',
+    'cs',
+    'computer engineering'
+  ],
+  'chandigarh group of colleges, landran (cgg)': [
+    'computer science',
+    'computer science engineering',
+    'cse',
+    'cs',
+    'computer engineering'
+  ],
+  'lovely professional university': [
+    'cse - ai and data engineering',
+    'ai and data engineering',
+    'Artificial Intelligence (AI) and Machine Learning (ML)'
+  ]
+};
+
 export const getCourseById = async (req, res) => {
   try {
     const { university_name } = req.params;
-    
+
     if (!university_name) {
       return res.status(400).json({
         success: false,
         message: 'University name is required'
       });
     }
-    
-    console.log('Looking for university:', university_name);
-    
-    // Use where clause properly
-    const response = await UniversityCourse.findOne({
-      where: { 
-        university_name: university_name 
-      }
-    });
 
-    if (!response) {
-      return res.status(404).json({
-        success: false,
-        message: `No course found for university: ${university_name}`
+    const decodedUniversity = decodeURIComponent(university_name).trim();
+    const normalizedUniversity = decodedUniversity.toLowerCase();
+
+    const isAllowedCollege = ALLOWED_COLLEGES.includes(normalizedUniversity);
+    const collegeSpecializations =
+      CSE_SPECIALIZATION_MAP[normalizedUniversity] || [];
+    let course = null;
+
+ 
+    if (isAllowedCollege) {
+      course = await UniversityCourse.findOne({
+        where: {
+          university_name: {
+            [Op.iLike]: decodedUniversity
+          },
+          degree_name: {
+            [Op.or]: ENGINEERING_DEGREES.map(d => ({
+              [Op.iLike]: `%${d}%`
+            }))
+          },
+          specialization: {
+            [Op.or]: collegeSpecializations.map(s => ({
+              [Op.iLike]: `%${s}%`
+            }))
+          },
+          status: {
+            [Op.iLike]: 'active'
+          }
+        },
       });
+
+      if (!course) {
+        course = await UniversityCourse.findOne({
+        where: {
+          university_name: {
+            [Op.iLike]: decodedUniversity
+          },
+          status: {
+            [Op.iLike]: 'active'
+          }
+        },
+        order: [['created_at', 'ASC']]
+      });
+      }
+
+    } 
+      else {
+      course = await UniversityCourse.findOne({
+        where: {
+          university_name: {
+            [Op.iLike]: decodedUniversity
+          },
+          status: {
+            [Op.iLike]: 'active'
+          }
+        },
+        order: [['created_at', 'ASC']]
+      });
+
+      if (!course) {
+        return res.status(404).json({
+          success: false,
+          message: `No course found for ${decodedUniversity}`
+        });
+      }
     }
 
-    console.log('Found course:', response.university_name);
-    
-    res.status(200).json({
+
+    return res.status(200).json({
       success: true,
-      message: 'Course for university',
-      response: response
+      message: 'Course found',
+      response: course
     });
 
   } catch (error) {
-    console.error('Get course error:', error);
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: 'Failed to fetch course',
       error: error.message
     });
   }
 };
-
-
-
