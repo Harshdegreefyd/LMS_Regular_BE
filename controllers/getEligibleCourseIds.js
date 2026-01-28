@@ -5,7 +5,7 @@ export async function getEligibleCourseIds(studentId, universityName) {
   const results = await sequelize.query(
     `
     SELECT lcs.course_id
-    FROM latest_course_status lcs
+    FROM latest_course_statuses lcs
     JOIN university_courses uc 
       ON lcs.course_id = uc.course_id
     WHERE lcs.student_id = :student_id
