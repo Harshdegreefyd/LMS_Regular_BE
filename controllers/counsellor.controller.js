@@ -193,7 +193,7 @@ export const getAllCounsellors = async (req, res) => {
 
     const counsellors = await Counsellor.findAll({
       where: whereClause,
-      attributes: { exclude: ['counsellor_password', 'role'] }
+      attributes: { exclude: ['counsellor_password'] }
     });
 
     const supervisors = await Counsellor.findAll({

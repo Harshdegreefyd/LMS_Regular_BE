@@ -4,7 +4,7 @@ export const authorize = (allowedRoles) => {
   return async (req, res, next) => {
     try {
       const token = req.cookies.token;
-      console.log(token,"hello")
+      // console.log(token,"hello")
       if (!token) return res.status(401).json({ message: 'Unauthorized' });
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecret123');
       req.user = decoded;
