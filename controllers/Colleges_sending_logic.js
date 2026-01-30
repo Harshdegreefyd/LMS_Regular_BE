@@ -1296,13 +1296,13 @@ async function handleSpecialUniversity(
     { Attribute: "mx_Course2", Value: "Btech" },
     {
       Attribute: "mx_State",
-      Value: collegeName.includes("Chandigarh University") ? "Punjab" : "Delhi",
+      Value: collegeName.includes("Chandigarh University") ? "Punjab" : "Punjab",
     },
     {
       Attribute: "mx_City",
       Value: collegeName.includes("Chandigarh University")
         ? "Chandigarh"
-        : "West Delhi",
+        : "Chandigarh",
     },
   ];
 
