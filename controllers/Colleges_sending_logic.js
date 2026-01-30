@@ -3,7 +3,7 @@ import { Student, UniversityCourse } from "../models/index.js";
 import { createCollegeApiSentStatus } from "./collegeApiSentStatus.controller.js";
 import CourseHeaderValue from "../models/university_header_values.js";
 import { Op, fn, col, where } from "sequelize";
-import {getEligibleCourseIds} from './getEligibleCourseIds.js'
+import { getEligibleCourseIds } from "./getEligibleCourseIds.js";
 async function findHeaderValue(collegeName, courseId, studentId) {
   try {
     const andConditions = [
@@ -14,8 +14,7 @@ async function findHeaderValue(collegeName, courseId, studentId) {
 
     if (courseId !== null && courseId !== undefined) {
       andConditions.push({ course_id: courseId });
-    } 
-    else {
+    } else {
       if (!studentId) {
         throw new Error("studentId is required when courseId is not provided");
       }
@@ -37,7 +36,7 @@ async function findHeaderValue(collegeName, courseId, studentId) {
       where: {
         [Op.and]: andConditions,
       },
-      order: [["created_at", "DESC"]], 
+      order: [["created_at", "DESC"]],
     });
 
     if (!courseHeaderValue || !courseHeaderValue.values) {
@@ -45,17 +44,14 @@ async function findHeaderValue(collegeName, courseId, studentId) {
     }
 
     return courseHeaderValue;
-
   } catch (error) {
     console.error(
       ` Error fetching course header values for ${collegeName}:`,
-      error
+      error,
     );
     throw error;
   }
 }
-
-
 
 async function updateStudentShortlistStatus(
   studentId,
@@ -775,7 +771,8 @@ async function processStandardUniversity(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🔄 Processing standard university: ${collegeName}`, {
     isPrimary,
@@ -783,7 +780,11 @@ async function processStandardUniversity(
     studentPhone: studentPhone || "Using primary",
   });
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
   let transformedData = {};
   let apiUrl = null;
   let apiKey = null;
@@ -916,7 +917,8 @@ async function handleShooliniOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling Shoolini University Online`, {
     collegeName,
@@ -925,7 +927,11 @@ async function handleShooliniOnline(
     studentPhone,
   });
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -1098,13 +1104,18 @@ async function handleJaypeeNoPaperForms(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling Jaypee NoPaperForms API: ${collegeName}`, {
     isPrimary,
   });
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -1247,7 +1258,8 @@ async function handleSpecialUniversity(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling special university: ${collegeName}`, {
     isPrimary,
@@ -1282,11 +1294,23 @@ async function handleSpecialUniversity(
         : "Gurgaon",
     },
     { Attribute: "mx_Course2", Value: "Btech" },
-    { Attribute: "mx_State", Value: "Delhi" },
-    { Attribute: "mx_City", Value: "West Delhi" },
+    {
+      Attribute: "mx_State",
+      Value: collegeName.includes("Chandigarh University") ? "Punjab" : "Delhi",
+    },
+    {
+      Attribute: "mx_City",
+      Value: collegeName.includes("Chandigarh University")
+        ? "Chandigarh"
+        : "West Delhi",
+    },
   ];
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
   const apiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1364,7 +1388,8 @@ async function handleManipalOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling Manipal Online: ${collegeName}`, { isPrimary });
   console.log(userResponse);
@@ -1396,7 +1421,11 @@ async function handleManipalOnline(
     { Attribute: "mx_Enquired_University", Value: "MUJ" },
   ];
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
   const apiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1464,7 +1493,8 @@ async function handleVivekanandGlobal(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling Vivekanand Global: ${collegeName}`, { isPrimary });
 
@@ -1498,7 +1528,11 @@ async function handleVivekanandGlobal(
     { Attribute: "Source", Value: "Nuvora" },
   ];
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
   const apiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1565,7 +1599,8 @@ async function handleLPUOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling LPU Online: ${collegeName}`, { isPrimary });
 
@@ -1580,13 +1615,17 @@ async function handleLPUOnline(
       !isPrimary && studentPhone
         ? studentPhone
         : userResponse.student_phone || "",
-    state: "delhi",
-    city: "West Delhi",
+    state: "Punjab",
+    city: "Chandigarh",
     field_new_specialization_for_new_widgets: "BBA",
     field_new_specialization: "BBA",
   };
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
   const apiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1653,11 +1692,16 @@ async function handleGLAOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling GLA Online: ${collegeName}`, { isPrimary });
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
   const baseApiUrl =
     courseHeaderValue?.values?.API_URL ||
     courseHeaderValue?.values?.["api-url"];
@@ -1760,11 +1804,16 @@ async function handleGalgotiasOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling Galgotias Online: ${collegeName}`, { isPrimary });
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -1886,7 +1935,11 @@ async function handleAmityOnline(
 ) {
   console.log(`🎯 Handling Amity Online: ${collegeName}`, { isPrimary });
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -1995,11 +2048,16 @@ async function handleMangalayatanOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
   console.log(`🎯 Handling Mangalayatan Online: ${collegeName}`, { isPrimary });
 
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
 
   if (!courseHeaderValue?.values) {
     throw new Error("Course header values not found");
@@ -2110,32 +2168,39 @@ async function CgcLandran(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,courseId
+  isPrimary,
+  courseId,
 ) {
-
-  const courseHeaderValue = await findHeaderValue(collegeName,courseId,studentId);
+  const courseHeaderValue = await findHeaderValue(
+    collegeName,
+    courseId,
+    studentId,
+  );
 
   // if (!courseHeaderValue?.values) {
   //   throw new Error("Course header values not found");
   // }
 
-  const defaultValues ={
-    "name": `${userResponse.student_name || ""} ${""}`.trim(),
-    "email": !isPrimary && studentEmail
+  const defaultValues = {
+    name: `${userResponse.student_name || ""} ${""}`.trim(),
+    email:
+      !isPrimary && studentEmail
         ? studentEmail
         : userResponse.student_email || "",
-    "college_id":"270",
-    "mobile": !isPrimary && studentPhone
+    college_id: "270",
+    mobile:
+      !isPrimary && studentPhone
         ? studentPhone
         : userResponse.student_phone || "",
-    "source":"nuvora",
-    "state": "Punjab",
-    "city": "Mohali",
-    "course": "B.Tech-CSE",
-    "secret_key": "b30c9bcd9fb18a82e41a505fae8490b2"
-}
+    source: "nuvora",
+    state: "Punjab",
+    city: "Chandigarh",
+    course: "B.Tech-CSE",
+    secret_key: "b30c9bcd9fb18a82e41a505fae8490b2",
+  };
   const values = courseHeaderValue?.values || defaultValues;
-  const baseApiUrl = values?.API_URL || "https://api.nopaperforms.com/dataporting/270/nuvora";
+  const baseApiUrl =
+    values?.API_URL || "https://api.nopaperforms.com/dataporting/270/nuvora";
 
   if (!baseApiUrl) {
     throw new Error("API URL not found in the course header values");
@@ -2199,10 +2264,7 @@ async function CgcLandran(
       timeout: 15000,
     });
 
-    const statusResult = CgcApiResponse(
-      apiResponse,
-      collegeName,
-    );
+    const statusResult = CgcApiResponse(apiResponse, collegeName);
 
     if (studentId) {
       await updateStudentShortlistStatus(
@@ -2325,7 +2387,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     } else if (isJaypeeNoPaperForms) {
       console.log(`🔄 Routing to Jaypee NoPaperForms handler`);
@@ -2336,7 +2399,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     } else if (isShooliniOnline) {
       console.log(`🔄 Routing to Shoolini Online handler`);
@@ -2347,7 +2411,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     } else if (isManipalOnline) {
       console.log(`🔄 Routing to Manipal Online handler`);
@@ -2358,7 +2423,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     } else if (isVivekanandGlobal) {
       console.log(`🔄 Routing to Vivekanand Global handler`);
@@ -2369,7 +2435,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     } else if (isLPUOnline) {
       console.log(`🔄 Routing to LPU Online handler`);
@@ -2381,7 +2448,7 @@ export const sentStatustoCollege = async (req, res) => {
         studentEmail,
         studentPhone,
         isPrimary,
-        courseId
+        courseId,
       );
     } else if (isGLAOnline) {
       console.log(`🔄 Routing to GLA Online handler`);
@@ -2392,7 +2459,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     } else if (isGalgotiasOnline) {
       console.log(`🔄 Routing to Galgotias Online handler`);
@@ -2403,7 +2471,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     } else if (isAmityOnline) {
       console.log(`🔄 Routing to Amity Online handler`);
@@ -2414,7 +2483,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     } else if (isMangalayatanOnline) {
       console.log(`🔄 Routing to Mangalayatan Online handler`);
@@ -2425,26 +2495,25 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
-    } 
-   else if (
-  collegeName.toLowerCase() === 'chandigarh group of colleges, landran (cgc)' ||
-  collegeName.toLowerCase().includes('cgc')
-) {
-  statusResult = await CgcLandran(
-    collegeName,
-    userResponse,
-    studentId,
-    sendType,
-    studentEmail,
-    studentPhone,
-    isPrimary,
-    courseId
-  );
-}
-
-    else {
+    } else if (
+      collegeName.toLowerCase() ===
+        "chandigarh group of colleges, landran (cgc)" ||
+      collegeName.toLowerCase().includes("cgc")
+    ) {
+      statusResult = await CgcLandran(
+        collegeName,
+        userResponse,
+        studentId,
+        sendType,
+        studentEmail,
+        studentPhone,
+        isPrimary,
+        courseId,
+      );
+    } else {
       console.log(`🔄 Routing to Standard University handler`);
       statusResult = await processStandardUniversity(
         req,
@@ -2454,7 +2523,8 @@ export const sentStatustoCollege = async (req, res) => {
         sendType,
         studentEmail,
         studentPhone,
-        isPrimary,courseId
+        isPrimary,
+        courseId,
       );
     }
 

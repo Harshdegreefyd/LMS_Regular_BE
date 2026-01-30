@@ -2,7 +2,6 @@ import { StudentRemark, Student, Counsellor, StudentLeadActivity, sequelize } fr
 import { Op, fn, literal, col } from 'sequelize';
 import pMap from 'p-map';
 export const createRemark = async (data) => {
-  // console.log('incoming data', data)
   const requiredFields = [
     'student_id',
     'lead_status',
