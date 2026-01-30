@@ -1296,13 +1296,15 @@ async function handleSpecialUniversity(
     { Attribute: "mx_Course2", Value: "Btech" },
     {
       Attribute: "mx_State",
-      Value: collegeName.includes("Chandigarh University") ? "Punjab" : "Punjab",
+      Value: collegeName.includes("Chandigarh University")
+        ? "Punjab"
+        : "Delhi",
     },
     {
       Attribute: "mx_City",
       Value: collegeName.includes("Chandigarh University")
         ? "Chandigarh"
-        : "Chandigarh",
+        : "West Delhi",
     },
   ];
 
@@ -2194,7 +2196,7 @@ async function CgcLandran(
         : userResponse.student_phone || "",
     source: "nuvora",
     state: "Punjab",
-    city: "Chandigarh",
+    city: "Mohali",
     course: "B.Tech-CSE",
     secret_key: "b30c9bcd9fb18a82e41a505fae8490b2",
   };
