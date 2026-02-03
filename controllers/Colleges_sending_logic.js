@@ -1961,8 +1961,7 @@ async function handleAmityOnline(
   sendType,
   studentEmail,
   studentPhone,
-  isPrimary,
-  isPartnerPortal,
+  isPrimary,courseId,isPartnerPortal
 ) {
   console.log(`🎯 Handling Amity Online: ${collegeName}`, { isPrimary });
 
