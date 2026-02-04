@@ -324,10 +324,21 @@ const getCounsellorPivotReport = async (
   const subqueryWhere = {};
 
   // Add date filter based on CourseStatusHistory created_at
-  if (startDate || endDate) {
+ if (startDate || endDate) {
     subqueryWhere.created_at = {};
-    if (startDate) subqueryWhere.created_at[Op.gte] = new Date(startDate);
-    if (endDate) subqueryWhere.created_at[Op.lte] = new Date(endDate);
+    if (startDate) {
+      // Start from beginning of start date
+      const startDateObj = new Date(startDate);
+      startDateObj.setHours(0, 0, 0, 0);
+      subqueryWhere.created_at[Op.gte] = startDateObj;
+    }
+    if (endDate) {
+      // End at beginning of next day (include full end date)
+      const endDateObj = new Date(endDate);
+      endDateObj.setDate(endDateObj.getDate() + 1);
+      endDateObj.setHours(0, 0, 0, 0);
+      subqueryWhere.created_at[Op.lt] = endDateObj;
+    }
   }
 
   const subquery = await CourseStatusHistory.findAll({
