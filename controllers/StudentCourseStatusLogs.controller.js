@@ -71,8 +71,6 @@ export const createStatusLog = async (req, res) => {
 
 
 
-
-
 export const getCollegeStatusReports = async (req, res) => {
   try {
     const { 
@@ -136,8 +134,40 @@ export const getCollegeStatusReports = async (req, res) => {
 };
 
 const getCollegesPivotReport = async (whereClause, courseWhereClause) => {
-  const statusesResult = await CourseStatusHistory.findAll({
+  // First, get the latest status for each student-course combination
+  const subquery = await CourseStatusHistory.findAll({
     where: whereClause,
+    attributes: [
+      'student_id',
+      'course_id',
+      [Sequelize.fn('MAX', Sequelize.col('created_at')), 'latest_date']
+    ],
+    group: ['student_id', 'course_id'],
+    raw: true
+  });
+
+  if (subquery.length === 0) {
+    return {
+      view: 'colleges-pivot',
+      rows: [],
+      columns: ['college', 'total'],
+      statuses: [],
+      totals: {
+        statusTotals: {},
+        grandTotal: 0
+      }
+    };
+  }
+
+  // Get the latest status records
+  const latestRecords = await CourseStatusHistory.findAll({
+    where: {
+      [Op.or]: subquery.map(item => ({
+        student_id: item.student_id,
+        course_id: item.course_id,
+        created_at: item.latest_date
+      }))
+    },
     include: [{
       model: UniversityCourse,
       as: 'university_course',
@@ -146,21 +176,31 @@ const getCollegesPivotReport = async (whereClause, courseWhereClause) => {
       attributes: []
     }],
     attributes: [
-      [Sequelize.fn('DISTINCT', Sequelize.col('course_status')), 'status']
+      'student_id',
+      'course_id',
+      'course_status'
     ],
     raw: true
   });
 
-  const statuses = statusesResult.map(item => item.status).filter(Boolean);
+  // Get all unique statuses from latest records
+  const statuses = [...new Set(latestRecords.map(item => item.course_status).filter(Boolean))];
   
+  // Get college-wise counts from latest records
   const collegeData = await CourseStatusHistory.findAll({
-    where: whereClause,
+    where: {
+      [Op.or]: subquery.map(item => ({
+        student_id: item.student_id,
+        course_id: item.course_id,
+        created_at: item.latest_date
+      }))
+    },
     include: [{
       model: UniversityCourse,
       as: 'university_course',
       required: true,
-      attributes: [],
-      where: courseWhereClause
+      where: courseWhereClause,
+      attributes: ['university_name']
     }],
     attributes: [
       [Sequelize.col('university_course.university_name'), 'college'],
@@ -220,18 +260,47 @@ const getCollegesPivotReport = async (whereClause, courseWhereClause) => {
 };
 
 const getCounsellorPivotReport = async (whereClause, courseWhereClause, level) => {
-  // First, let's debug and see what data we have
-  console.log(`Getting ${level} counsellor report with filters:`, whereClause);
-  
-  // Get counsellors based on role (assuming 'role' field contains 'l2' or 'l3')
+  // First, get the latest status for each student-course combination
+  const subquery = await CourseStatusHistory.findAll({
+    where: whereClause,
+    attributes: [
+      'student_id',
+      'course_id',
+      [Sequelize.fn('MAX', Sequelize.col('created_at')), 'latest_date']
+    ],
+    group: ['student_id', 'course_id'],
+    raw: true
+  });
+
+  if (subquery.length === 0) {
+    return {
+      view: `${level}-pivot`,
+      rows: [],
+      columns: ['counsellor', 'total'],
+      statuses: [],
+      level: level,
+      totals: {
+        statusTotals: {},
+        grandTotal: 0
+      }
+    };
+  }
+
+  // Get counsellors based on role
   const counsellorWhereClause = {};
   if (level === 'l2' || level === 'l3') {
     counsellorWhereClause.role = { [Op.iLike]: `%${level}%` };
   }
   
-  // Get all unique statuses for counsellors with this role
-  const statusesResult = await CourseStatusHistory.findAll({
-    where: whereClause,
+  // Get latest records for counsellors
+  const latestRecords = await CourseStatusHistory.findAll({
+    where: {
+      [Op.or]: subquery.map(item => ({
+        student_id: item.student_id,
+        course_id: item.course_id,
+        created_at: item.latest_date
+      }))
+    },
     include: [
       {
         model: UniversityCourse,
@@ -249,17 +318,25 @@ const getCounsellorPivotReport = async (whereClause, courseWhereClause, level) =
       }
     ],
     attributes: [
-      [Sequelize.fn('DISTINCT', Sequelize.col('course_status')), 'status']
+      'student_id',
+      'course_id',
+      'course_status'
     ],
     raw: true
   });
 
-  const statuses = statusesResult.map(item => item.status).filter(Boolean);
-  console.log(`Found ${statuses.length} unique statuses for ${level}:`, statuses);
+  // Get all unique statuses
+  const statuses = [...new Set(latestRecords.map(item => item.course_status).filter(Boolean))];
   
-  // Get counsellor-wise status counts
+  // Get counsellor-wise counts from latest records
   const counsellorData = await CourseStatusHistory.findAll({
-    where: whereClause,
+    where: {
+      [Op.or]: subquery.map(item => ({
+        student_id: item.student_id,
+        course_id: item.course_id,
+        created_at: item.latest_date
+      }))
+    },
     include: [
       {
         model: UniversityCourse,
@@ -286,8 +363,6 @@ const getCounsellorPivotReport = async (whereClause, courseWhereClause, level) =
     raw: true
   });
 
-  console.log(`Found ${counsellorData.length} counsellor data records for ${level}`);
-  
   const pivotData = {};
   const counsellorTotals = {};
   const statusTotals = {};
@@ -322,7 +397,6 @@ const getCounsellorPivotReport = async (whereClause, courseWhereClause, level) =
   });
 
   const grandTotal = Object.values(counsellorTotals).reduce((sum, total) => sum + total, 0);
-  console.log(`Processed ${Object.keys(pivotData).length} counsellors for ${level}, grand total: ${grandTotal}`);
 
   return {
     view: `${level}-pivot`,
