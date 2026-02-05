@@ -872,7 +872,6 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
       return `INNER JOIN students s_fb ON ${tableAlias}.student_id = s_fb.student_id AND s_fb.source IN ('${analyserFilters.sources.map(v => v.trim().replace(/'/g, "''")).join("','")}')`;
     };
 
-    // NEW CTEs: Check for ANY admission/formfilled in history (not just latest)
     const firstAdmissionCTE = `
       SELECT DISTINCT
         student_id
@@ -1019,7 +1018,6 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
            connected_remarks_count AS (${connectedRemarksCountCTE}),
            student_remark_count AS (${studentRemarkCountCTE}),
            pre_ni_students AS (${preNICTE}),
-           -- NEW CTEs for ANY status in history
            first_admission_students AS (${firstAdmissionCTE}),
            first_formfilled_students AS (${firstFormfilledCTE}),
            first_enrolled_students AS (${firstEnrolledCTE}),
@@ -1029,6 +1027,8 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
       SELECT
         ${groupByField} AS group_by,
         ${supervisorSelect},
+        COALESCE(assigned_counsellor.counsellor_id, c.counsellor_id) AS counsellor_id,
+        COALESCE(assigned_counsellor.status, c.status) AS counsellor_status,
         
         COUNT(DISTINCT s.student_id) AS lead_count,
         
@@ -1058,25 +1058,21 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
           THEN s.student_id 
         END) AS attempted,
 
-        -- COUNT formfilled if student EVER had Application/Admission/Enrolled status
         COUNT(DISTINCT CASE 
           WHEN ffs.student_id IS NOT NULL
           THEN s.student_id 
         END) AS formFilled,
 
-        -- COUNT admission if student EVER had Admission/Enrolled status
         COUNT(DISTINCT CASE 
           WHEN fas.student_id IS NOT NULL
           THEN s.student_id 
         END) AS admission_count,
 
-        -- COUNT enrolled if student EVER had Enrolled status
         COUNT(DISTINCT CASE 
           WHEN fes.student_id IS NOT NULL
           THEN s.student_id 
         END) AS enrolled,
 
-        -- COUNT NotInterested if student EVER had NotInterested status
         COUNT(DISTINCT CASE 
           WHEN fnis.student_id IS NOT NULL
           THEN s.student_id 
@@ -1126,7 +1122,6 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
       LEFT JOIN connected_remarks_count crc ON s.student_id = crc.student_id
       LEFT JOIN student_remark_count src ON s.student_id = src.student_id
       LEFT JOIN pre_ni_students pns ON s.student_id = pns.student_id
-      -- Join with the new CTEs for ANY status in history
       LEFT JOIN first_admission_students fas ON s.student_id = fas.student_id
       LEFT JOIN first_formfilled_students ffs ON s.student_id = ffs.student_id
       LEFT JOIN first_enrolled_students fes ON s.student_id = fes.student_id
@@ -1148,67 +1143,135 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
     }
 
     mainQuery += `
-      GROUP BY ${groupByClause}
+      GROUP BY ${groupByClause}, COALESCE(assigned_counsellor.counsellor_id, c.counsellor_id), 
+               COALESCE(assigned_counsellor.status, c.status)
       ORDER BY ${sortColumn} ${finalSortOrder}
     `;
+
+    console.log('MAIN QUERY:', mainQuery);
 
     const groupedRows = await sequelize.query(mainQuery, {
       type: sequelize.QueryTypes.SELECT,
     });
 
+    console.log('Raw grouped rows count:', groupedRows.length);
+    groupedRows.forEach((row, index) => {
+      console.log(`Row ${index}: ${row.group_by} (ID: ${row.counsellor_id}, Status: ${row.counsellor_status})`);
+    });
+
     if (type === 'agent') {
+      // CRITICAL FIX: First deduplicate the groupedRows by counsellor_id
+      const uniqueGroupedRows = [];
+      const seenCounsellorIds = new Set();
+      const seenCounsellorNames = new Set();
+      
+      // First pass: Deduplicate by counsellor_id (most reliable)
+      groupedRows.forEach(row => {
+        const counsellorId = row.counsellor_id;
+        const counsellorName = row.group_by;
+        
+        // For Unassigned rows, counsellor_id might be null
+        if (row.group_by === 'Unassigned') {
+          if (!uniqueGroupedRows.find(r => r.group_by === 'Unassigned')) {
+            uniqueGroupedRows.push(row);
+          }
+          return;
+        }
+        
+        if (counsellorId && !seenCounsellorIds.has(counsellorId)) {
+          seenCounsellorIds.add(counsellorId);
+          seenCounsellorNames.add(counsellorName);
+          uniqueGroupedRows.push(row);
+        } else if (!counsellorId && counsellorName && !seenCounsellorNames.has(counsellorName)) {
+          // For rows without counsellor_id, use name as fallback
+          seenCounsellorNames.add(counsellorName);
+          uniqueGroupedRows.push(row);
+        } else {
+          console.log(`Skipping duplicate: ${counsellorName} (ID: ${counsellorId})`);
+        }
+      });
+
+      console.log('Unique grouped rows after dedup:', uniqueGroupedRows.length);
+
+      // Now get all counsellors from the database
       let allCounsellorsQuery = `
-        SELECT 
-          counsellor_id,
-          counsellor_name,
-          status,
-          assigned_to,
+        SELECT DISTINCT ON (c1.counsellor_id)
+          c1.counsellor_id,
+          c1.counsellor_name,
+          c1.status,
+          c1.assigned_to,
           (SELECT counsellor_name FROM counsellors c2 WHERE c2.counsellor_id = c1.assigned_to) as supervisor_name
         FROM counsellors c1
         WHERE 1=1
       `;
 
       if (counsellor_status) {
-        allCounsellorsQuery += ` AND status = '${counsellor_status}'`;
+        allCounsellorsQuery += ` AND c1.status = '${counsellor_status}'`;
       }
 
-      allCounsellorsQuery += ` ORDER BY counsellor_name`;
+      allCounsellorsQuery += ` ORDER BY c1.counsellor_id, c1.counsellor_name`;
 
       const allCounsellors = await sequelize.query(allCounsellorsQuery, {
         type: sequelize.QueryTypes.SELECT,
       });
 
-      const existingResultsMap = {};
-      groupedRows.forEach(row => {
-        if (row.group_by && row.group_by !== 'Unassigned') {
-          existingResultsMap[row.group_by] = row;
-        }
-      });
+      console.log('All counsellors from DB:', allCounsellors.length);
 
-      const existingByCounsellorId = {};
-      groupedRows.forEach(row => {
+      // Create maps for easy lookup
+      const existingResultsById = new Map();
+      const existingResultsByName = new Map();
+      
+      uniqueGroupedRows.forEach(row => {
         if (row.counsellor_id) {
-          existingByCounsellorId[row.counsellor_id] = row;
+          existingResultsById.set(row.counsellor_id, row);
+        }
+        if (row.group_by && row.group_by !== 'Unassigned') {
+          // Only keep the first occurrence by name
+          if (!existingResultsByName.has(row.group_by)) {
+            existingResultsByName.set(row.group_by, row);
+          }
         }
       });
 
-      const mergedRows = allCounsellors.map(counsellor => {
+      // Merge counsellors with existing data
+      const usedCounsellorIds = new Set();
+      const usedCounsellorNames = new Set();
+      const mergedRows = [];
+
+      // Process all counsellors from database
+      allCounsellors.forEach(counsellor => {
+        const counsellorId = counsellor.counsellor_id;
         const counsellorName = counsellor.counsellor_name;
-        const existingRow = existingResultsMap[counsellorName] || existingByCounsellorId[counsellor.counsellor_id];
+        
+        // Skip if we've already processed this counsellor
+        if (usedCounsellorIds.has(counsellorId) || usedCounsellorNames.has(counsellorName)) {
+          console.log(`Skipping duplicate counsellor from DB: ${counsellorName} (${counsellorId})`);
+          return;
+        }
+        
+        usedCounsellorIds.add(counsellorId);
+        usedCounsellorNames.add(counsellorName);
+        
+        let existingRow = existingResultsById.get(counsellorId);
+        
+        // If not found by id, try by name
+        if (!existingRow && counsellorName) {
+          existingRow = existingResultsByName.get(counsellorName);
+        }
 
         if (existingRow) {
-          return {
+          mergedRows.push({
             ...existingRow,
-            counsellor_id: counsellor.counsellor_id,
-            counsellor_status: counsellor.status,
+            counsellor_id: counsellorId,
+            counsellor_status: counsellor.status || existingRow.counsellor_status || 'active',
             supervisor_name: counsellor.supervisor_name || existingRow.supervisor_name || 'No Supervisor'
-          };
+          });
         } else {
-          return {
+          mergedRows.push({
             group_by: counsellorName,
             supervisor_name: counsellor.supervisor_name || 'No Supervisor',
-            counsellor_id: counsellor.counsellor_id,
-            counsellor_status: counsellor.status,
+            counsellor_id: counsellorId,
+            counsellor_status: counsellor.status || 'active',
             lead_count: 0,
             freshCount: 0,
             pre_ni_count: 0,
@@ -1225,22 +1288,26 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
             remarks_4_7: 0,
             remarks_8_10: 0,
             remarks_gt_10: 0
-          };
+          });
         }
       });
 
-      const unassignedRow = groupedRows.find(row => row.group_by === 'Unassigned');
-      if (unassignedRow) {
-        if (!counsellor_status || (counsellor_status === 'active' && unassignedRow)) {
-          mergedRows.push({
-            ...unassignedRow,
-            counsellor_status: 'unassigned'
-          });
-        }
+      // Handle unassigned leads
+      const unassignedRow = uniqueGroupedRows.find(row => row.group_by === 'Unassigned');
+      if (unassignedRow && (!counsellor_status || counsellor_status === 'active')) {
+        mergedRows.push({
+          ...unassignedRow,
+          counsellor_status: 'unassigned',
+          counsellor_id: null,
+          supervisor_name: unassignedRow.supervisor_name || 'No Supervisor'
+        });
       }
 
+      // Replace groupedRows with mergedRows
       groupedRows.length = 0;
       groupedRows.push(...mergedRows);
+      
+      console.log('Final merged rows count:', groupedRows.length);
     }
 
     const getValue = (row, prop) => {
@@ -1327,7 +1394,30 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
         remarks_gt_10: 0
       };
 
+      // Track processed counsellors to avoid duplicates
+      const processedCounsellorIds = new Set();
+      const processedCounsellorNames = new Set();
+      
       rawRows.forEach(row => {
+        // Skip "Total" row if present
+        if (row.group_by === 'Total') return;
+        
+        const counsellorId = row.counsellor_id;
+        const counsellorName = row.group_by;
+        
+        // Skip if we've already processed this counsellor
+        if (counsellorId && processedCounsellorIds.has(counsellorId)) {
+          console.log('Skipping duplicate in overall calc (by ID):', counsellorName, counsellorId);
+          return;
+        }
+        if (counsellorName && processedCounsellorNames.has(counsellorName)) {
+          console.log('Skipping duplicate in overall calc (by name):', counsellorName);
+          return;
+        }
+        
+        if (counsellorId) processedCounsellorIds.add(counsellorId);
+        if (counsellorName) processedCounsellorNames.add(counsellorName);
+        
         overall.lead_count += getValue(row, 'lead_count');
         overall.freshCount += getValue(row, 'freshCount');
         overall.pre_ni_count += getValue(row, 'pre_ni_count');
@@ -1356,9 +1446,19 @@ export const getThreeRecordsOfFormFilled = async (req, res) => {
     let groupedBySupervisor = null;
     if (type === 'agent') {
       const supervisorGroups = {};
+      const processedCounsellors = new Set();
 
       grouped.forEach(row => {
         const supervisorName = row.supervisor_name || 'No Supervisor';
+        const counsellorKey = row.counsellor_id ? `id_${row.counsellor_id}` : `name_${row.group_by}`;
+        
+        // Skip if this counsellor was already processed
+        if (processedCounsellors.has(counsellorKey)) {
+          console.log('Skipping duplicate in supervisor grouping:', row.group_by, row.counsellor_id);
+          return;
+        }
+        
+        processedCounsellors.add(counsellorKey);
 
         if (!supervisorGroups[supervisorName]) {
           supervisorGroups[supervisorName] = {
